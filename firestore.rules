@@ -1,0 +1,133 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    function isOrderParty(orderData) {
+      return isAuth() && (
+        request.auth.uid == orderData.customerId ||
+        request.auth.uid == orderData.riderId
+      );
+    }
+
+    function isOrderCustomer(orderData) {
+      return isAuth() && request.auth.uid == orderData.customerId;
+    }
+
+    function isOrderRider(orderData) {
+      return isAuth() && request.auth.uid == orderData.riderId;
+    }
+
+    // ── Users ────────────────────────────────────────────────
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+
+      // Addresses subcollection
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Payment methods — read only from client, writes via Cloud Functions
+      match /paymentMethods/{methodId} {
+        allow read: if isOwner(uid);
+      }
+    }
+
+    // ── Riders ───────────────────────────────────────────────
+    match /riders/{uid} {
+      // Customers can read rider profiles (for browsing nearby riders)
+      allow read: if isAuth();
+      // Riders can create and update their own profile
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+    }
+
+    // ── Orders ───────────────────────────────────────────────
+    match /orders/{orderId} {
+      allow create: if isAuth() && request.resource.data.customerId == request.auth.uid;
+      allow read: if isAuth() && (
+        resource.data.customerId == request.auth.uid ||
+        resource.data.riderId == request.auth.uid
+      );
+      // Rider can update status fields; customer can add tip
+      allow update: if isAuth() && (
+        resource.data.customerId == request.auth.uid ||
+        resource.data.riderId == request.auth.uid
+      );
+
+      // Stops
+      match /stops/{stopId} {
+        allow read: if isAuth() && isOrderParty(get(/databases/$(database)/documents/orders/$(orderId)).data);
+        // Rider can update stop status
+        allow update: if isAuth() && isOrderRider(get(/databases/$(database)/documents/orders/$(orderId)).data);
+      }
+
+      // Tracking — rider writes, both parties read
+      match /tracking/{pointId} {
+        allow read: if isAuth() && isOrderParty(get(/databases/$(database)/documents/orders/$(orderId)).data);
+        allow create: if isAuth() && isOrderRider(get(/databases/$(database)/documents/orders/$(orderId)).data);
+      }
+
+      // Chat — both parties can read and write during active delivery
+      match /chat/{messageId} {
+        allow read: if isAuth() && isOrderParty(get(/databases/$(database)/documents/orders/$(orderId)).data);
+        allow create: if isAuth() && isOrderParty(get(/databases/$(database)/documents/orders/$(orderId)).data)
+          && request.resource.data.senderId == request.auth.uid;
+        allow update: if isAuth() && isOrderParty(get(/databases/$(database)/documents/orders/$(orderId)).data);
+      }
+
+      // Disputes — both parties can create and read
+      match /dispute/{disputeId} {
+        allow read: if isAuth() && isOrderParty(get(/databases/$(database)/documents/orders/$(orderId)).data);
+        allow create: if isAuth() && isOrderParty(get(/databases/$(database)/documents/orders/$(orderId)).data)
+          && request.resource.data.reporterId == request.auth.uid;
+      }
+    }
+
+    // ── Ratings ──────────────────────────────────────────────
+    match /ratings/{ratingId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && request.resource.data.raterId == request.auth.uid;
+    }
+
+    // ── Promo Codes ──────────────────────────────────────────
+    match /promoCodes/{code} {
+      allow read: if isAuth();
+
+      match /usages/{uid} {
+        allow read: if isOwner(uid);
+      }
+    }
+
+    // ── Referrals ────────────────────────────────────────────
+    match /referrals/{referralId} {
+      allow read: if isAuth() && (
+        resource.data.referrerId == request.auth.uid ||
+        resource.data.referredId == request.auth.uid
+      );
+      allow create: if isAuth() && request.resource.data.referredId == request.auth.uid;
+    }
+
+    // ── Notifications ────────────────────────────────────────
+    match /notifications/{notificationId} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow update: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Settings ─────────────────────────────────────────────
+    match /settings/{document} {
+      allow read: if isAuth();
+    }
+  }
+}

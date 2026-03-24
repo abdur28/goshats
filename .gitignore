@@ -36,8 +36,18 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-app-example
+# Turbo
+.turbo/
 
 # generated native folders
-/ios
-/android
+ios/
+android/
+
+# ai 
+.agent/
+.claude/
+.gemini/
+.plans/
+
+# pnpm
+pnpm-debug.log*
