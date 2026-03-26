@@ -5,9 +5,11 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "peerDependencies": {
+    "@expo/vector-icons": "*",
     "nativewind": "^4.0.0",
     "react": "*",
-    "react-native": "*"
+    "react-native": "*",
+    "react-native-safe-area-context": "*"
   },
   "devDependencies": {
     "typescript": "~5.9.2"

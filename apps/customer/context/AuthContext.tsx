@@ -1,29 +1,33 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useCallback,
-  type ReactNode,
-} from "react";
-import { type User as FirebaseUser } from "firebase/auth";
-import * as SplashScreen from "expo-splash-screen";
-import { router } from "expo-router";
+import { getAppleCredential } from "@/lib/apple-auth";
 import {
-  onAuthStateChange,
-  signInWithEmail,
-  registerWithEmail,
-  signInWithGoogle as firebaseSignInWithGoogle,
-  signInWithApple as firebaseSignInWithApple,
-  signOutUser,
-  sendPasswordReset,
-  updateUserPassword,
-  getUser,
+  configureGoogleSignIn,
+  getGoogleIdToken,
+  signOutGoogle,
+} from "@/lib/google-auth";
+import { useAuthStore } from "@/store/auth-store";
+import {
   createUser,
+  signInWithApple as firebaseSignInWithApple,
+  signInWithGoogle as firebaseSignInWithGoogle,
+  getUser,
+  onAuthStateChange,
+  registerWithEmail,
+  sendPasswordReset,
+  signInWithEmail,
+  signOutUser,
+  updateUserPassword,
 } from "@goshats/firebase";
 import type { User } from "@goshats/types";
-import { useAuthStore } from "@/store/auth-store";
-import { getGoogleIdToken, configureGoogleSignIn, signOutGoogle } from "@/lib/google-auth";
-import { getAppleCredential } from "@/lib/apple-auth";
+import { router } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { type User as FirebaseUser } from "firebase/auth";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  type ReactNode,
+} from "react";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -41,7 +45,7 @@ interface AuthContextType {
   register: (
     email: string,
     password: string,
-    profileData: Omit<User, "uid" | "createdAt" | "updatedAt">
+    profileData: Omit<User, "uid" | "createdAt" | "updatedAt">,
   ) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -148,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const firebaseUser = await firebaseSignInWithApple(
         credential.identityToken,
-        credential.nonce
+        credential.nonce,
       );
       const existingProfile = await getUser(firebaseUser.uid);
       if (!existingProfile) {
@@ -183,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (
       email: string,
       password: string,
-      profileData: Omit<User, "uid" | "createdAt" | "updatedAt">
+      profileData: Omit<User, "uid" | "createdAt" | "updatedAt">,
     ) => {
       store.setLoading(true);
       store.setError(null);
@@ -197,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         store.setLoading(false);
       }
     },
-    []
+    [],
   );
 
   const signOut = useCallback(async () => {
@@ -240,7 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         store.setLoading(false);
       }
     },
-    []
+    [],
   );
 
   const clearError = useCallback(() => {

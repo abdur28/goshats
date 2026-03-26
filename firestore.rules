@@ -27,6 +27,16 @@ service cloud.firestore {
       return isAuth() && request.auth.uid == orderData.riderId;
     }
 
+    // ── OTPs (pre-auth email verification) ──────────────────
+    match /otps/{email} {
+      // Anyone can create/overwrite (needed before user is authenticated)
+      allow create, update: if true;
+      // Only readable to verify (client-side check before registration)
+      allow read: if true;
+      // Only admin/cloud functions should delete
+      allow delete: if false;
+    }
+
     // ── Users ────────────────────────────────────────────────
     match /users/{uid} {
       allow read: if isOwner(uid);

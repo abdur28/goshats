@@ -12,13 +12,20 @@ export const COLORS = {
 
   white: "#FFFFFF",
   black: "#000000",
-  background: "#F8F9FA",
+  background: "#F9FAFB",
   surface: "#FFFFFF",
-  border: "#E9ECEF",
-  textPrimary: "#1A1A2E",
+  border: "#E5E7EB",
+  textPrimary: "#111827",
   textSecondary: "#6B7280",
   textMuted: "#9CA3AF",
   placeholder: "#D1D5DB",
+} as const;
+
+export const FONTS = {
+  regular: "PolySans-Neutral",
+  medium: "PolySans-Median",
+  semibold: "PolySans-Median",
+  bold: "PolySans-Bulky",
 } as const;
 
 export const SPACING = {

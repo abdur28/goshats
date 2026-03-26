@@ -46,8 +46,8 @@ export function handleNotificationResponse(
   const data = response.notification.request.content.data;
 
   if (data?.orderId && data?.screen === "tracking") {
-    router.push(`/(tracking)/${data.orderId}`);
+    router.push(`/(tracking)/${data.orderId}` as any);
   } else if (data?.screen === "history") {
-    router.push("/(tabs)/history");
+    router.push("/(tabs)/history" as any);
   }
 }
