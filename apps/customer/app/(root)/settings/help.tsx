@@ -75,7 +75,7 @@ const FaqItem = ({ q, a }: { q: string; a: string }) => {
   return (
     <Pressable
       onPress={() => setOpen((v) => !v)}
-      className="bg-white rounded-3xl px-6 py-4 active:bg-gray-50"
+      className="bg-white rounded-3xl shadow-sm border border-gray-100 px-6 py-4 active:bg-gray-50"
     >
       <View className="flex-row items-center justify-between gap-3">
         <Text className="font-sans-semibold text-[15px] text-gray-900 flex-1 leading-snug">
@@ -128,7 +128,7 @@ export default function HelpScreen() {
         <View className="mx-6 gap-2">
           <Pressable
             onPress={() => Linking.openURL("mailto:support@goshats.com")}
-            className="bg-white rounded-3xl flex-row items-center py-[18px] px-6 active:bg-gray-50"
+            className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-row items-center py-[18px] px-6 active:bg-gray-50"
           >
             <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-4">
               <Sms size={22} color="#006B3F" variant="TwoTone" />
@@ -145,7 +145,7 @@ export default function HelpScreen() {
 
           <Pressable
             onPress={() => Linking.openURL("tel:+2340000000000")}
-            className="bg-white rounded-3xl flex-row items-center py-[18px] px-6 active:bg-gray-50"
+            className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-row items-center py-[18px] px-6 active:bg-gray-50"
           >
             <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-4">
               <Call size={22} color="#006B3F" variant="TwoTone" />
@@ -162,7 +162,7 @@ export default function HelpScreen() {
 
           <Pressable
             onPress={() => Linking.openURL("https://goshats.com/help")}
-            className="bg-white rounded-3xl flex-row items-center py-[18px] px-6 active:bg-gray-50"
+            className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-row items-center py-[18px] px-6 active:bg-gray-50"
           >
             <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-4">
               <MessageQuestion size={22} color="#006B3F" variant="TwoTone" />

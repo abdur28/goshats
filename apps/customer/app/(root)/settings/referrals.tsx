@@ -1,21 +1,8 @@
 import { useAuthStore } from "@/store/auth-store";
 import { Header } from "@goshats/ui";
 import { router } from "expo-router";
-import {
-  Copy,
-  Gift,
-  People,
-  TickCircle,
-  Wallet,
-} from "iconsax-react-native";
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  Share,
-  Text,
-  View,
-} from "react-native";
+import { Copy, Gift, People, TickCircle, Wallet } from "iconsax-react-native";
+import { Alert, Pressable, ScrollView, Share, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Kobo → Naira
@@ -95,7 +82,7 @@ export default function ReferralsScreen() {
         <Text className="font-sans-medium text-xs text-gray-400 uppercase tracking-widest px-6 mt-8 mb-2">
           Your Code
         </Text>
-        <View className="mx-6 bg-white rounded-3xl px-6 py-5">
+        <View className="mx-6 bg-white rounded-3xl shadow-sm border border-gray-100 px-6 py-5">
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="font-sans text-sm text-gray-500 mb-1">
@@ -132,10 +119,12 @@ export default function ReferralsScreen() {
           {STEPS.map((step, i) => (
             <View
               key={step.title}
-              className="bg-white rounded-3xl flex-row items-center px-6 py-4"
+              className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-row items-center px-6 py-4"
             >
               <View className="w-8 h-8 rounded-full bg-primary items-center justify-center mr-4">
-                <Text className="font-sans-bold text-sm text-white">{i + 1}</Text>
+                <Text className="font-sans-bold text-sm text-white">
+                  {i + 1}
+                </Text>
               </View>
               <View className="flex-1">
                 <Text className="font-sans-semibold text-base text-gray-900 mb-0.5">

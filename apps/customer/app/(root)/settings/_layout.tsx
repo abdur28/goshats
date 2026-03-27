@@ -7,6 +7,21 @@ export default function SettingsLayout() {
         headerShown: false,
         animation: "slide_from_right",
       }}
-    />
+    >
+      <Stack.Screen
+        name="address"
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+        }}
+      />
+      <Stack.Screen
+        name="add-payment"
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+        }}
+      />
+    </Stack>
   );
 }

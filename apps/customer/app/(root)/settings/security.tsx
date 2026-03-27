@@ -140,7 +140,7 @@ export default function SecurityScreen() {
           <View className="gap-2">
             <Pressable
               onPress={handleForgotPassword}
-              className="bg-white rounded-3xl flex-row items-center py-[18px] px-6 active:bg-gray-50"
+              className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-row items-center py-[18px] px-6 active:bg-gray-50"
             >
               <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-4">
                 {resetLoading ? (
@@ -159,7 +159,7 @@ export default function SecurityScreen() {
               </View>
             </Pressable>
 
-            <View className="bg-white rounded-3xl flex-row items-center py-[18px] px-6">
+            <View className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-row items-center py-[18px] px-6">
               <View className="w-12 h-12 rounded-full bg-gray-100 items-center justify-center mr-4">
                 <Lock1 size={22} color="#9CA3AF" variant="TwoTone" />
               </View>

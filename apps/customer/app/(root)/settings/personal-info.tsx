@@ -227,9 +227,9 @@ export default function PersonalInfoScreen() {
               <Pressable
                 onPress={() => setEditing(true)}
                 hitSlop={10}
-                className="w-9 h-9 rounded-full bg-primary/10 items-center justify-center"
+                className="w-10 h-10 rounded-full bg-white shadow-sm border border-gray-100 items-center justify-center active:bg-gray-50"
               >
-                <Edit2 size={18} color="#006B3F" variant="Bold" />
+                <Edit2 size={20} color="#111827" variant="TwoTone" />
               </Pressable>
             )
           }
@@ -282,7 +282,7 @@ export default function PersonalInfoScreen() {
 
           {/* ── Name ── */}
           <SectionLabel title="Name" />
-          <View className="mx-6 bg-white rounded-4xl overflow-hidden">
+          <View className="mx-6 bg-white rounded-4xl shadow-sm border border-gray-100">
             <FieldRow
               label="First / Other Name"
               value={form.otherName}
@@ -304,7 +304,7 @@ export default function PersonalInfoScreen() {
 
           {/* ── Contact ── */}
           <SectionLabel title="Contact" />
-          <View className="mx-6 bg-white rounded-4xl overflow-hidden">
+          <View className="mx-6 bg-white rounded-4xl shadow-sm border border-gray-100">
             <FieldRow
               label="Email Address"
               value={form.email}
@@ -326,10 +326,10 @@ export default function PersonalInfoScreen() {
 
           {/* ── Account ── */}
           <SectionLabel title="Account" />
-          <View className="mx-6 rounded-4xl overflow-hidden">
+          <View className="mx-6 bg-white rounded-4xl shadow-sm border border-gray-100">
             <Pressable
               onPress={handleDeleteAccount}
-              className="flex-row items-center py-[18px] px-6 active:bg-red-50 bg-white"
+              className="flex-row items-center py-[18px] px-6 active:bg-red-50 rounded-4xl"
             >
               <View className="w-12 h-12 rounded-full bg-danger/10 items-center justify-center mr-4">
                 <Trash size={22} color="#EF4444" variant="TwoTone" />

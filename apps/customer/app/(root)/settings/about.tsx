@@ -74,7 +74,7 @@ export default function AboutScreen() {
             <Pressable
               key={link.title}
               onPress={() => Linking.openURL(link.url)}
-              className="bg-white rounded-3xl flex-row items-center py-[18px] px-6 active:bg-gray-50"
+              className="bg-white rounded-3xl shadow-sm border border-gray-100 flex-row items-center py-[18px] px-6 active:bg-gray-50"
             >
               <View className="w-12 h-12 rounded-full bg-primary/10 items-center justify-center mr-4">
                 {link.icon}

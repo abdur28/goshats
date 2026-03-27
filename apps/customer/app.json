@@ -9,10 +9,14 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.goshats.customer"
+      "bundleIdentifier": "com.goshats.customer",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.goshats.customer",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#006B3F",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -67,6 +71,9 @@
     "extra": {
       "router": {
         "origin": "https://goshats.expo.app/"
+      },
+      "eas": {
+        "projectId": "dd665e6b-f811-43d0-9318-4afd9ac9520a"
       }
     }
   }

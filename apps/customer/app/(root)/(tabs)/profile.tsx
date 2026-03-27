@@ -4,15 +4,15 @@ import { signOutUser } from "@goshats/firebase";
 import { Avatar, SettingItem } from "@goshats/ui";
 import { router } from "expo-router";
 import {
-    Code1,
-    Gift,
-    Location,
-    Logout,
-    MessageQuestion,
-    MoneyRecive,
-    Notification,
-    ShieldSecurity,
-    User,
+  Code1,
+  Gift,
+  Location,
+  Logout,
+  MessageQuestion,
+  MoneyRecive,
+  Notification,
+  ShieldSecurity,
+  User,
 } from "iconsax-react-native";
 import { useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
@@ -120,103 +120,80 @@ export default function ProfileScreen() {
         <View style={{ marginTop: SPACING.sm, marginBottom: 40 }}>
           {/* Account Section */}
           {renderSectionHeader("Account")}
-          <View style={{ marginHorizontal: SPACING.lg, gap: 8 }}>
-            <View style={{ backgroundColor: COLORS.white, borderRadius: 24, overflow: "hidden" }}>
-              <SettingItem
-                icon={User}
-                title="Personal Information"
-                subtitle="Name, email, and account deletion"
-                onPress={() => router.push("/settings/personal-info" as any)}
-                isLast
-              />
-            </View>
-            <View style={{ backgroundColor: COLORS.white, borderRadius: 24, overflow: "hidden" }}>
-              <SettingItem
-                icon={ShieldSecurity}
-                title="Security"
-                subtitle="Password, 2FA, verification"
-                onPress={() => router.push("/settings/security" as any)}
-                isLast
-              />
-            </View>
+          <View style={{ marginHorizontal: SPACING.lg }}>
+            <SettingItem
+              icon={User}
+              title="Personal Information"
+              subtitle="Name, email, and account deletion"
+              onPress={() => router.push("/settings/personal-info" as any)}
+            />
+            <SettingItem
+              icon={ShieldSecurity}
+              title="Security"
+              subtitle="Password, 2FA, verification"
+              onPress={() => router.push("/settings/security" as any)}
+              isLast
+            />
           </View>
 
           {/* Preferences Section */}
           {renderSectionHeader("Preferences")}
-          <View style={{ marginHorizontal: SPACING.lg, gap: 8 }}>
-            <View style={{ backgroundColor: COLORS.white, borderRadius: 24, overflow: "hidden" }}>
-              <SettingItem
-                icon={Gift}
-                title="Referrals & Rewards"
-                subtitle="Invite friends and earn credit"
-                onPress={() => router.push("/settings/referrals" as any)}
-                isLast
-              />
-            </View>
-            <View style={{ backgroundColor: COLORS.white, borderRadius: 24, overflow: "hidden" }}>
-              <SettingItem
-                icon={Location}
-                title="Saved Addresses"
-                subtitle="Home, office, and other locations"
-                onPress={() => {}}
-                isLast
-              />
-            </View>
-            <View style={{ backgroundColor: COLORS.white, borderRadius: 24, overflow: "hidden" }}>
-              <SettingItem
-                icon={MoneyRecive}
-                title="Manage Payments"
-                subtitle="Cards and wallet balance"
-                onPress={() => {}}
-                isLast
-              />
-            </View>
-            <View style={{ backgroundColor: COLORS.white, borderRadius: 24, overflow: "hidden" }}>
-              <SettingItem
-                icon={Notification}
-                title="Notifications"
-                subtitle="Email and push alerts"
-                onPress={() => router.push("/settings/notifications" as any)}
-                isLast
-              />
-            </View>
+          <View style={{ marginHorizontal: SPACING.lg }}>
+            <SettingItem
+              icon={Gift}
+              title="Referrals & Rewards"
+              subtitle="Invite friends and earn credit"
+              onPress={() => router.push("/settings/referrals" as any)}
+            />
+            <SettingItem
+              icon={Location}
+              title="Saved Addresses"
+              subtitle="Home, office, and other locations"
+              onPress={() => router.push("/settings/saved-addresses" as any)}
+            />
+            <SettingItem
+              icon={MoneyRecive}
+              title="Manage Payments"
+              subtitle="Cards and wallet balance"
+              onPress={() => router.push("/settings/payments" as any)}
+            />
+            <SettingItem
+              icon={Notification}
+              title="Notifications"
+              subtitle="Email and push alerts"
+              onPress={() => router.push("/settings/notifications" as any)}
+              isLast
+            />
           </View>
 
           {/* Support Section */}
           {renderSectionHeader("Support & About")}
-          <View style={{ marginHorizontal: SPACING.lg, gap: 8 }}>
-            <View style={{ backgroundColor: COLORS.white, borderRadius: 24, overflow: "hidden" }}>
-              <SettingItem
-                icon={MessageQuestion}
-                title="Help Center"
-                subtitle="Get support and FAQs"
-                onPress={() => router.push("/settings/help" as any)}
-                isLast
-              />
-            </View>
-            <View style={{ backgroundColor: COLORS.white, borderRadius: 24, overflow: "hidden" }}>
-              <SettingItem
-                icon={Code1}
-                title="About"
-                subtitle="App version and information"
-                onPress={() => router.push("/settings/about" as any)}
-                isLast
-              />
-            </View>
+          <View style={{ marginHorizontal: SPACING.lg }}>
+            <SettingItem
+              icon={MessageQuestion}
+              title="Help Center"
+              subtitle="Get support and FAQs"
+              onPress={() => router.push("/settings/help" as any)}
+            />
+            <SettingItem
+              icon={Code1}
+              title="About"
+              subtitle="App version and information"
+              onPress={() => router.push("/settings/about" as any)}
+              isLast
+            />
           </View>
 
           {/* Logout */}
           <View style={{ marginTop: 32, marginHorizontal: SPACING.lg }}>
-            <View style={{ backgroundColor: COLORS.white, borderRadius: 24, overflow: "hidden" }}>
-              <SettingItem
-                icon={Logout}
-                title={signingOut ? "Logging out..." : "Log Out"}
-                onPress={handleSignOut}
-                showArrow={false}
-                variant="danger"
-                isLast
-              />
-            </View>
+            <SettingItem
+              icon={Logout}
+              title={signingOut ? "Logging out..." : "Log Out"}
+              onPress={handleSignOut}
+              showArrow={false}
+              variant="danger"
+              isLast
+            />
           </View>
         </View>
       </ScrollView>

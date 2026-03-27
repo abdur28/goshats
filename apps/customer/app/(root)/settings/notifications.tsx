@@ -103,7 +103,7 @@ export default function NotificationsScreen() {
           Delivery & Orders
         </Text>
         <View className="gap-2 mb-8">
-          <View className="bg-white rounded-3xl overflow-hidden">
+          <View className="bg-white rounded-3xl shadow-sm border border-gray-100">
             <ToggleRow
               icon={<Notification size={22} color="#006B3F" variant="TwoTone" />}
               title="Push Notifications"
@@ -113,7 +113,7 @@ export default function NotificationsScreen() {
               isLast
             />
           </View>
-          <View className="bg-white rounded-3xl overflow-hidden">
+          <View className="bg-white rounded-3xl shadow-sm border border-gray-100">
             <ToggleRow
               icon={<Sms size={22} color="#006B3F" variant="TwoTone" />}
               title="SMS Alerts"
@@ -130,7 +130,7 @@ export default function NotificationsScreen() {
           Account & Promotions
         </Text>
         <View className="gap-2">
-          <View className="bg-white rounded-3xl overflow-hidden">
+          <View className="bg-white rounded-3xl shadow-sm border border-gray-100">
             <ToggleRow
               icon={<Message size={22} color="#006B3F" variant="TwoTone" />}
               title="Email Notifications"
@@ -140,7 +140,7 @@ export default function NotificationsScreen() {
               isLast
             />
           </View>
-          <View className="bg-white rounded-3xl overflow-hidden">
+          <View className="bg-white rounded-3xl shadow-sm border border-gray-100">
             <ToggleRow
               icon={<Tag size={22} color="#006B3F" variant="TwoTone" />}
               title="Newsletter & Promos"

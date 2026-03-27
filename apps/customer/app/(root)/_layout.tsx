@@ -15,7 +15,10 @@ export default function RootGroupLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
-      <Stack.Screen name="settings" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen
+        name="settings"
+        options={{ animation: "slide_from_right" }}
+      />
     </Stack>
   );
 }
