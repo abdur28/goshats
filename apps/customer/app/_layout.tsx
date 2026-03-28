@@ -1,5 +1,6 @@
 import { useAuthStore } from "@/store/auth-store";
-import { getUser, onAuthStateChange } from "@goshats/firebase";
+import { usePricingStore } from "@/store/pricing-store";
+import { getUser, listenToPricingSettings, onAuthStateChange } from "@goshats/firebase";
 import { useFonts } from "expo-font";
 import { Slot } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -17,6 +18,14 @@ export default function RootLayout() {
     "PolySans-Median": require("@/assets/fonts/PolySans-Median.otf"),
     "PolySans-Bulky": require("@/assets/fonts/PolySans-Bulky.otf"),
   });
+
+  // Listen to admin pricing settings (real-time)
+  useEffect(() => {
+    const unsub = listenToPricingSettings((settings) => {
+      usePricingStore.getState().setSettings(settings);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {

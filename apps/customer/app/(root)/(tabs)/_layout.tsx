@@ -2,7 +2,7 @@ import { COLORS } from "@/constants/theme";
 import { Tabs } from "expo-router";
 import { Home, Profile, Receipt21, Routing2 } from "iconsax-react-native";
 import { useEffect } from "react";
-import { BackHandler, Pressable, View } from "react-native";
+import { BackHandler, Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TAB_CONFIG = [
@@ -41,7 +41,10 @@ export default function TabsLayout() {
             pointerEvents="box-none"
             style={{
               position: "absolute",
-              bottom: Math.max(insets.bottom, 12),
+              bottom: Math.max(
+                insets.bottom,
+                Platform.OS === "android" ? 60 : 12,
+              ),
               left: 0,
               right: 0,
               alignItems: "center",
@@ -65,8 +68,10 @@ export default function TabsLayout() {
               <View style={{ flexDirection: "row", gap: GAP, zIndex: 1 }}>
                 {state.routes.map((route, index) => {
                   const isFocused = state.index === index;
-                  const configItem = TAB_CONFIG.find((t) => t.name === route.name);
-                  
+                  const configItem = TAB_CONFIG.find(
+                    (t) => t.name === route.name,
+                  );
+
                   // If we don't have a config for this route, skip it
                   if (!configItem) return null;
                   const TabIcon = configItem.Icon;
@@ -110,7 +115,9 @@ export default function TabsLayout() {
                           width: CIRCLE,
                           height: CIRCLE,
                           borderRadius: CIRCLE / 2,
-                          backgroundColor: isFocused ? COLORS.primary : "#F5F5F5",
+                          backgroundColor: isFocused
+                            ? COLORS.primary
+                            : "#F5F5F5",
                           borderWidth: 2,
                           borderColor: isFocused ? COLORS.primary : "#DCDCDC",
                           alignItems: "center",

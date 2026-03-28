@@ -99,7 +99,19 @@ export const useBookingStore = create<BookingState>((set) => ({
     set({ isScheduled, scheduledPickupAt: scheduledPickupAt ?? null }),
   setPricing: (pricing) => set(pricing),
   setPromo: (promoCode, promoDiscountKobo) =>
-    set({ promoCode, promoDiscountKobo }),
-  clearPromo: () => set({ promoCode: null, promoDiscountKobo: 0 }),
+    set((state) => ({
+      promoCode,
+      promoDiscountKobo,
+      totalAmountKobo: Math.max(
+        0,
+        state.fareAmountKobo + state.bookingFeeKobo - promoDiscountKobo,
+      ),
+    })),
+  clearPromo: () =>
+    set((state) => ({
+      promoCode: null,
+      promoDiscountKobo: 0,
+      totalAmountKobo: state.fareAmountKobo + state.bookingFeeKobo,
+    })),
   resetBooking: () => set(initialState),
 }));

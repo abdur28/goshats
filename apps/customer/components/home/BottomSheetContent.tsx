@@ -1,10 +1,15 @@
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { router } from "expo-router";
 import { ArrowRight2, Car } from "iconsax-react-native";
 import React from "react";
 import { Image, Pressable, Text, View } from "react-native";
 import { COLORS } from "../../constants/theme";
 
-export default function BottomSheetContent() {
+interface BottomSheetContentProps {
+  riderCount?: number;
+}
+
+export default function BottomSheetContent({ riderCount = 0 }: BottomSheetContentProps) {
   return (
     <BottomSheetScrollView
       className="flex-1 px-5 pt-2 mb-10"
@@ -16,7 +21,7 @@ export default function BottomSheetContent() {
       {/* Rides near you card - hide if there is an active order*/}
       <Pressable
         className="bg-white border border-gray-100 rounded-[24px] p-4 flex-row items-center mt-2 shadow-sm"
-        onPress={() => console.log("Navigate to booking")}
+        onPress={() => router.push("/(booking)/location" as any)}
       >
         <View className="bg-primary/10 w-12 h-12 rounded-full items-center justify-center">
           <Car size={24} color={COLORS.primary} variant="Bulk" />
@@ -26,7 +31,9 @@ export default function BottomSheetContent() {
             Rides near you
           </Text>
           <Text className="text-xs font-sans text-gray-500 mt-0.5">
-            Order a rider based on your current location
+            {riderCount > 0
+              ? `${riderCount} rider${riderCount === 1 ? "" : "s"} available nearby`
+              : "Order a rider based on your current location"}
           </Text>
         </View>
         <View className="bg-gray-50 w-8 h-8 rounded-full items-center justify-center ml-2">

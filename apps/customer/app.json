@@ -10,13 +10,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.goshats.customer",
+      "config": {},
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.goshats.customer",
-      "googleServicesFile": "./google-services.json",
+      "config": {},
       "adaptiveIcon": {
         "backgroundColor": "#006B3F",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -58,6 +59,7 @@
           "color": "#006B3F"
         }
       ],
+      "react-native-maps",
       "expo-apple-authentication",
       "@react-native-google-signin/google-signin",
       "expo-font",

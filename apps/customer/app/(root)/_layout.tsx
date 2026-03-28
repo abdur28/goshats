@@ -19,6 +19,10 @@ export default function RootGroupLayout() {
         name="settings"
         options={{ animation: "slide_from_right" }}
       />
+      <Stack.Screen
+        name="(booking)"
+        options={{ animation: "slide_from_bottom", gestureEnabled: false }}
+      />
     </Stack>
   );
 }

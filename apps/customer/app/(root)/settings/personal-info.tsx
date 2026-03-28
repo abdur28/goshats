@@ -121,7 +121,11 @@ export default function PersonalInfoScreen() {
 
   const handlePickPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return Alert.alert("Permission denied", "Allow photo access in Settings.");
+    if (!perm.granted)
+      return Alert.alert(
+        "Permission denied",
+        "Allow photo access in Settings.",
+      );
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images",
@@ -148,7 +152,10 @@ export default function PersonalInfoScreen() {
         setUserProfile({ ...userProfile, profilePhotoUrl: downloadUrl });
       }
     } catch {
-      Alert.alert("Upload Failed", "Could not upload your photo. Please try again.");
+      Alert.alert(
+        "Upload Failed",
+        "Could not upload your photo. Please try again.",
+      );
     } finally {
       setUploadingPhoto(false);
       setUploadProgress(0);
@@ -255,7 +262,13 @@ export default function PersonalInfoScreen() {
                 className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-primary items-center justify-center border-[3px] border-gray-50"
               >
                 {uploadingPhoto ? (
-                  <Text style={{ fontSize: 8, color: "#fff", fontFamily: "PolySans-Bulky" }}>
+                  <Text
+                    style={{
+                      fontSize: 8,
+                      color: "#fff",
+                      fontFamily: "PolySans-Bulky",
+                    }}
+                  >
                     {uploadProgress}%
                   </Text>
                 ) : (
@@ -350,7 +363,7 @@ export default function PersonalInfoScreen() {
         {editing && (
           <View
             className="absolute bottom-0 left-0 right-0 bg-gray-50 px-6 pt-4 border-t border-gray-200 flex-row gap-3"
-            style={{ paddingBottom: Platform.OS === "ios" ? 36 : 20 }}
+            style={{ paddingBottom: Platform.OS === "ios" ? 36 : 52 }}
           >
             <Pressable
               onPress={handleCancelEdit}
