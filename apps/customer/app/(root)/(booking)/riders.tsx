@@ -1,5 +1,6 @@
 import { COLORS } from "@/constants/theme";
 import { useNearbyRiders } from "@/hooks/use-nearby-riders";
+import { Skeleton } from "@goshats/ui";
 import { formatDistance, formatDuration, formatNaira } from "@/lib/format";
 import { haversineDistance } from "@/lib/geo";
 import { calculateRouteDistance } from "@/lib/maps";
@@ -14,7 +15,6 @@ import { router } from "expo-router";
 import { Car } from "iconsax-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   Pressable,
@@ -31,7 +31,7 @@ export default function RidersScreen() {
   const setPricing = useBookingStore((s) => s.setPricing);
   const currentLocation = useLocationStore((s) => s.currentLocation);
   const pricingSettings = usePricingStore((s) => s.settings);
-  const { riders, isLoading } = useNearbyRiders(10);
+  const { riders, isLoading, error, refetch } = useNearbyRiders(10);
 
   const [routeDistance, setRouteDistance] = useState<number | null>(null);
   const [routeDuration, setRouteDuration] = useState<number | null>(null);
@@ -225,11 +225,38 @@ export default function RidersScreen() {
       )}
 
       {loadingRoute || isLoading ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="font-sans text-sm text-gray-400 mt-3">
-            Finding riders near you...
+        <View style={{ paddingTop: 16, paddingHorizontal: 20 }}>
+          {[0, 1, 2].map((i) => (
+            <View
+              key={i}
+              style={{
+                backgroundColor: "#fff",
+                borderRadius: 20,
+                padding: 16,
+                marginBottom: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <Skeleton width={52} height={52} borderRadius={26} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <Skeleton height={13} width="50%" borderRadius={6} />
+                <Skeleton height={11} width="35%" borderRadius={6} />
+                <Skeleton height={11} width="60%" borderRadius={6} />
+              </View>
+              <Skeleton width={70} height={36} borderRadius={18} />
+            </View>
+          ))}
+        </View>
+      ) : error ? (
+        <View style={{ margin: 20, padding: 16, backgroundColor: "#FEF2F2", borderRadius: 16 }}>
+          <Text style={{ fontFamily: "PolySans-Median", fontSize: 13, color: "#EF4444", marginBottom: 8 }}>
+            Couldn&apos;t find riders. Check your connection and try again.
           </Text>
+          <Pressable onPress={refetch}>
+            <Text style={{ fontFamily: "PolySans-Bulky", fontSize: 13, color: COLORS.primary }}>Retry</Text>
+          </Pressable>
         </View>
       ) : sortedRiders.length === 0 ? (
         <View className="flex-1 items-center justify-center px-10">

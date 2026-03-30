@@ -16,6 +16,7 @@ import Animated, {
   withSequence,
   withSpring,
   withTiming,
+  type SharedValue,
 } from "react-native-reanimated";
 
 const THUMB_SIZE = 60;
@@ -38,7 +39,7 @@ function ArrowChevrons() {
   React.useEffect(() => {
     const duration = 600;
     const delay = 150;
-    const animate = (sv: Animated.SharedValue<number>, d: number) => {
+    const animate = (sv: SharedValue<number>, d: number) => {
       sv.value = withDelay(
         d,
         withRepeat(

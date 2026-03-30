@@ -51,3 +51,6 @@ android/
 
 # pnpm
 pnpm-debug.log*
+
+google-services.json
+GoogleService-Info.plist

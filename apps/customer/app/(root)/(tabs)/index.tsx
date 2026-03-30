@@ -19,6 +19,7 @@ import type { PlaceDetails } from "../../../lib/maps";
 import { useAuthStore } from "../../../store/auth-store";
 import { useBookingStore } from "../../../store/booking-store";
 import { useMapStore } from "../../../store/map-store";
+import { useOrderStore } from "../../../store/order-store";
 
 const ABUJA_REGION = {
   latitude: 9.0765,
@@ -99,11 +100,20 @@ export default function HomeScreen() {
       clearSelectedRider();
       resetBooking();
       // Pre-select this rider
-      useBookingStore.getState().setRider(rider.uid, rider.tier, rider.tier === "premium" ? 1.5 : rider.tier === "express" ? 2.0 : 1.0);
+      useBookingStore
+        .getState()
+        .setRider(
+          rider.uid,
+          rider.tier,
+          rider.tier === "premium" ? 1.5 : rider.tier === "express" ? 2.0 : 1.0,
+        );
       if (location) {
         setPickup({
           address: "",
-          location: { latitude: location.latitude, longitude: location.longitude },
+          location: {
+            latitude: location.latitude,
+            longitude: location.longitude,
+          },
           contactName: userProfile?.otherName
             ? `${userProfile.otherName} ${userProfile.surname ?? ""}`.trim()
             : "",
@@ -131,7 +141,10 @@ export default function HomeScreen() {
       if (location) {
         setPickup({
           address: "",
-          location: { latitude: location.latitude, longitude: location.longitude },
+          location: {
+            latitude: location.latitude,
+            longitude: location.longitude,
+          },
           contactName: userProfile?.otherName
             ? `${userProfile.otherName} ${userProfile.surname ?? ""}`.trim()
             : "",
@@ -176,6 +189,7 @@ export default function HomeScreen() {
   }, [location]);
 
   const selectedRider = riders.find((r) => r.uid === selectedRiderId) ?? null;
+  const activeOrder = useOrderStore((s) => s.activeOrder);
 
   return (
     <View className="flex-1 bg-gray-50">
@@ -281,6 +295,7 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
+
       {/* Rider Info Card */}
       {selectedRider && (
         <RiderInfoCard
@@ -304,7 +319,10 @@ export default function HomeScreen() {
         containerStyle={{ zIndex: 99, elevation: 99 }}
         backgroundStyle={{ borderRadius: 32, backgroundColor: "#F9FAFB" }}
       >
-        <BottomSheetContent riderCount={riders.length} />
+        <BottomSheetContent
+          riderCount={riders.length}
+          activeOrder={activeOrder}
+        />
       </BottomSheet>
 
       {/* Search Modal */}

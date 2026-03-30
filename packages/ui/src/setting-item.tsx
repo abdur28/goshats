@@ -33,8 +33,8 @@ export const SettingItem = ({
   return (
     <Pressable
       onPress={onPress}
-      className={`flex-row items-center py-[18px] px-6 ${
-        isLast ? "" : "border-b border-gray-200"
+      className={`flex-row items-center py-[18px] px-6 bg-white rounded-[24px] shadow-sm border border-gray-100 ${
+        isLast ? "" : "mb-3"
       }`}
       style={({ pressed }) => ({
         backgroundColor: pressed ? "#F9FAFB" : "#FFFFFF",

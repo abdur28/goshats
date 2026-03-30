@@ -1,36 +1,83 @@
+import { COLORS } from "@/constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { listenToTracking } from "@goshats/firebase";
 import type { TrackingPoint } from "@goshats/types";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
-import { MAP_STYLE } from "@/constants/map-style";
 import RoutePolyline from "./RoutePolyline";
 
 interface TrackingMapViewProps {
-  orderId: string;
+  orderId: string | null;
   destination: { latitude: number; longitude: number };
   pickup?: { latitude: number; longitude: number };
+  riderLocation?: { latitude: number; longitude: number };
   className?: string;
+}
+
+function RiderMarkerIcon() {
+  return (
+    <View
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor: "#fff",
+      }}
+    >
+      <MaterialCommunityIcons name="motorbike" size={18} color="#fff" />
+    </View>
+  );
+}
+
+function PickupMarkerIcon() {
+  return (
+    <View
+      style={{
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: COLORS.primary,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor: "#fff",
+      }}
+    >
+      <View
+        style={{
+          width: 10,
+          height: 10,
+          borderRadius: 5,
+          backgroundColor: "#fff",
+        }}
+      />
+    </View>
+  );
 }
 
 export default function TrackingMapView({
   orderId,
   destination,
   pickup,
+  riderLocation,
   className = "",
 }: TrackingMapViewProps) {
   const mapRef = useRef<MapView>(null);
   const [riderPosition, setRiderPosition] = useState<TrackingPoint | null>(
-    null
+    null,
   );
+  const [etaSeconds, setEtaSeconds] = useState<number | null>(null);
 
-  // Listen to real-time rider position
   useEffect(() => {
+    if (!orderId) return;
     const unsubscribe = listenToTracking(orderId, (point) => {
       if (point) {
         setRiderPosition(point);
-        // Smoothly follow rider
         mapRef.current?.animateToRegion(
           {
             latitude: point.location.latitude,
@@ -38,23 +85,57 @@ export default function TrackingMapView({
             latitudeDelta: 0.008,
             longitudeDelta: 0.004,
           },
-          600
+          600,
         );
       }
     });
-
     return () => unsubscribe();
   }, [orderId]);
 
-  const riderCoord = riderPosition?.location;
+  const riderCoord = riderPosition?.location ?? riderLocation ?? null;
+  const riderLat = riderCoord?.latitude ?? null;
+  const riderLng = riderCoord?.longitude ?? null;
+  const heading = riderPosition?.headingDegrees ?? 0;
+  const hasRider = !!riderCoord;
+  const pickupLat = pickup?.latitude ?? null;
+  const pickupLng = pickup?.longitude ?? null;
+
+  const riderMarker = useMemo(() => {
+    if (!riderLat || !riderLng) return null;
+    return (
+      <Marker
+        coordinate={{ latitude: riderLat, longitude: riderLng }}
+        anchor={{ x: 0.5, y: 0.5 }}
+        tracksViewChanges={false}
+        rotation={heading}
+      >
+        <RiderMarkerIcon />
+      </Marker>
+    );
+  }, [riderLat, riderLng, heading]);
+
+  const pickupMarker = useMemo(() => {
+    if (!pickupLat || !pickupLng || hasRider) return null;
+    return (
+      <Marker
+        coordinate={{ latitude: pickupLat, longitude: pickupLng }}
+        anchor={{ x: 0.5, y: 0.5 }}
+        tracksViewChanges={false}
+      >
+        <PickupMarkerIcon />
+      </Marker>
+    );
+  }, [pickupLat, pickupLng, hasRider]);
 
   return (
-    <View className={`overflow-hidden rounded-[24px] ${className}`}>
+    <View
+      style={{ flex: 1 }}
+      className={`overflow-hidden rounded-[24px] ${className}`}
+    >
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFillObject}
-        customMapStyle={MAP_STYLE}
         initialRegion={{
           latitude: destination.latitude,
           longitude: destination.longitude,
@@ -70,52 +151,44 @@ export default function TrackingMapView({
         pitchEnabled={false}
         rotateEnabled={false}
       >
-        {/* Route from rider to destination */}
         {riderCoord && (
           <RoutePolyline
             pickup={riderCoord}
             dropoff={destination}
-            showInfoChip
+            hidePickupMarker
+            onRouteInfo={(info) => setEtaSeconds(info.durationSeconds)}
           />
         )}
-
-        {/* Show pickup marker if provided and rider hasn't reached it yet */}
-        {pickup && !riderCoord && (
-          <Marker
-            coordinate={pickup}
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
-          >
-            <View className="w-8 h-8 rounded-full bg-primary items-center justify-center border-2 border-white shadow-sm">
-              <View className="w-2.5 h-2.5 rounded-full bg-white" />
-            </View>
-          </Marker>
-        )}
-
-        {/* Animated rider marker */}
-        {riderCoord && (
-          <Marker
-            coordinate={riderCoord}
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
-            rotation={riderPosition?.headingDegrees ?? 0}
-          >
-            <View className="bg-primary rounded-full p-2.5 border-2 border-white shadow-sm">
-              <MaterialCommunityIcons
-                name="motorbike"
-                size={20}
-                color="#FFFFFF"
-              />
-            </View>
-          </Marker>
-        )}
+        {pickupMarker}
+        {riderMarker}
       </MapView>
 
-      {/* Live indicator */}
-      {riderCoord && (
-        <View className="absolute top-3 left-3 flex-row items-center bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-100">
-          <View className="w-2 h-2 rounded-full bg-green-500 mr-2" />
-          <Text className="font-sans-bold text-xs text-gray-700">Live</Text>
+      {etaSeconds !== null && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: 12,
+            right: 12,
+            backgroundColor: "#fff",
+            borderRadius: 20,
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 2,
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: "PolySans-Bulky",
+              fontSize: 12,
+              color: "#111827",
+            }}
+          >
+            {Math.round(etaSeconds / 60)} min away
+          </Text>
         </View>
       )}
     </View>

@@ -1,10 +1,22 @@
+import PaymentSelector from "@/components/booking/PaymentSelector";
 import SwipeToConfirm from "@/components/booking/SwipeToConfirm";
 import BookingMapView from "@/components/map/BookingMapView";
+import PaystackPaymentModal, {
+  CardDetails,
+} from "@/components/payment/PaystackPaymentModal";
 import { COLORS } from "@/constants/theme";
 import { formatDistance, formatDuration, formatNaira } from "@/lib/format";
+import { generatePaystackReference } from "@/lib/paystack";
 import { useAuthStore } from "@/store/auth-store";
 import { useBookingStore } from "@/store/booking-store";
-import { createOrder, getPromoCode, getPromoUsage } from "@goshats/firebase";
+import {
+  addPaymentMethod,
+  createOrder,
+  getPaymentMethods,
+  getPromoCode,
+  getPromoUsage,
+} from "@goshats/firebase";
+import type { PaymentMethod } from "@goshats/types";
 import { Header } from "@goshats/ui";
 import { router } from "expo-router";
 import { Timestamp } from "firebase/firestore";
@@ -17,7 +29,7 @@ import {
   Timer1,
   Wallet2,
 } from "iconsax-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -29,18 +41,36 @@ import {
   TextInput,
   View,
 } from "react-native";
-
 import { SafeAreaView } from "react-native-safe-area-context";
+
+function mapToCardType(brand: string): "mastercard" | "visa" | "verve" {
+  const b = (brand ?? "").toLowerCase();
+  if (b.includes("visa")) return "visa";
+  if (b.includes("verve")) return "verve";
+  return "mastercard";
+}
 
 export default function SummaryScreen() {
   const booking = useBookingStore();
   const { user, userProfile } = useAuthStore();
 
+  // ─── Promo ─────────────────────────────────────────────────────────────────
   const [promoInput, setPromoInput] = useState("");
   const [showPromo, setShowPromo] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [applyingPromo, setApplyingPromo] = useState(false);
   const [useCredits, setUseCredits] = useState(false);
+
+  // ─── Payment ───────────────────────────────────────────────────────────────
+  const [checkoutMethod, setCheckoutMethod] = useState<"cash" | "card">("cash");
+  const [savedCards, setSavedCards] = useState<PaymentMethod[]>([]);
+  const [selectedCard, setSelectedCard] = useState<PaymentMethod | null>(null);
+  const [showPaystackModal, setShowPaystackModal] = useState(false);
+
+  // ─── Card save preference ──────────────────────────────────────────────────
+  const [saveCard, setSaveCard] = useState(true);
+
+  // ─── Order ─────────────────────────────────────────────────────────────────
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -65,25 +95,38 @@ export default function SummaryScreen() {
     resetBooking,
   } = booking;
 
+  // ─── Load saved cards ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user) return;
+    getPaymentMethods(user.uid).then((cards) => {
+      setSavedCards(cards);
+      const primary = cards.find((c) => c.isPrimary) ?? cards[0] ?? null;
+      setSelectedCard(primary);
+    });
+  }, [user]);
+
+  // ─── Pricing ────────────────────────────────────────────────────────────────
   const referralCredits = userProfile?.referralCredits ?? 0;
   const subtotal = fareAmountKobo + bookingFeeKobo;
-
-  // Credits applied = min(credits, remaining after promo)
+  // Credits cannot reduce the order by more than 50% of subtotal
+  const maxCreditsKobo = Math.floor(subtotal / 2);
   const creditsApplied =
     useCredits && referralCredits > 0
-      ? Math.min(referralCredits, Math.max(0, subtotal - promoDiscountKobo))
+      ? Math.min(
+          referralCredits,
+          Math.max(0, subtotal - promoDiscountKobo),
+          maxCreditsKobo,
+        )
       : 0;
-
   const finalTotal = Math.max(0, totalAmountKobo - creditsApplied);
 
+  // ─── Promo handlers ─────────────────────────────────────────────────────────
   const handleApplyPromo = async () => {
     const code = promoInput.trim().toUpperCase();
-    if (!code) return;
-    if (!user) return;
+    if (!code || !user) return;
 
     setPromoError(null);
     setApplyingPromo(true);
-
     try {
       const promo = await getPromoCode(code);
 
@@ -91,22 +134,18 @@ export default function SummaryScreen() {
         setPromoError("Invalid promo code");
         return;
       }
-
       if (!promo.isActive) {
         setPromoError("This promo code is no longer active");
         return;
       }
-
       if (promo.expiresAt.toDate() < new Date()) {
         setPromoError("This promo code has expired");
         return;
       }
-
       if (promo.usedCount >= promo.usageLimit) {
         setPromoError("This promo code has reached its usage limit");
         return;
       }
-
       if (subtotal < promo.minOrderKobo) {
         setPromoError(
           `Minimum order of ${formatNaira(promo.minOrderKobo)} required`,
@@ -114,26 +153,21 @@ export default function SummaryScreen() {
         return;
       }
 
-      // Check per-user usage
       const usage = await getPromoUsage(code, user.uid);
       if (usage && usage.usedCount >= promo.perUserLimit) {
         setPromoError("You've already used this promo code");
         return;
       }
 
-      // Calculate discount
       let discountKobo: number;
       if (promo.discountType === "fixed") {
         discountKobo = promo.discountValueKobo;
       } else {
-        // percentage
         discountKobo = Math.round(subtotal * (promo.discountValueKobo / 100));
         if (promo.maxDiscountKobo != null) {
           discountKobo = Math.min(discountKobo, promo.maxDiscountKobo);
         }
       }
-
-      // Don't discount more than the subtotal
       discountKobo = Math.min(discountKobo, subtotal);
 
       booking.setPromo(code, discountKobo);
@@ -152,12 +186,17 @@ export default function SummaryScreen() {
     setPromoError(null);
   };
 
-  const handleConfirmOrder = async () => {
+  // ─── Order creation ─────────────────────────────────────────────────────────
+  const createOrderWithPayment = async (paymentParams: {
+    paymentMethod: "cash" | "card";
+    paymentStatus: "pending" | "paid";
+    paystackReference: string | null;
+  }) => {
     if (!user || !pickup || !dropoff || !selectedRiderId || !loadType) return;
 
     setIsSubmitting(true);
     try {
-      await createOrder({
+      const orderId = await createOrder({
         customerId: user.uid,
         riderId: selectedRiderId,
         loadType,
@@ -176,15 +215,14 @@ export default function SummaryScreen() {
         fareAmountKobo,
         bookingFeeKobo,
         promoDiscountKobo,
+        referralCreditsAppliedKobo: creditsApplied,
         tipAmountKobo: 0,
         totalAmountKobo: finalTotal,
         promoCode: booking.promoCode,
         status: "pending",
         conditionAtPickup: null,
         timeline: [],
-        paymentStatus: "pending",
-        paymentMethod: creditsApplied > 0 ? "referral_credits" : "card",
-        paystackReference: null,
+        ...paymentParams,
         estimatedDistanceMeters,
         estimatedDurationSeconds,
         actualPickupAt: null,
@@ -195,17 +233,118 @@ export default function SummaryScreen() {
       });
 
       resetBooking();
-      Alert.alert("Order Placed!", "Your delivery request has been sent.", [
-        {
-          text: "OK",
-          onPress: () => router.replace("/(root)/(tabs)" as any),
-        },
-      ]);
+      router.replace({
+        pathname: "/(tracking)/[id]",
+        params: { id: orderId },
+      } as any);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to place order.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // ─── Swipe confirm ──────────────────────────────────────────────────────────
+  const handleSwipeConfirm = async () => {
+    if (checkoutMethod === "cash") {
+      await createOrderWithPayment({
+        paymentMethod: "cash",
+        paymentStatus: "pending",
+        paystackReference: null,
+      });
+      return;
+    }
+
+    // Card — charge via authorization code
+    if (!selectedCard) return;
+    setIsSubmitting(true);
+    try {
+      const reference = generatePaystackReference();
+      const res = await fetch("/api/paystack-charge-authorization", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          authorizationCode: selectedCard.paystackAuthorizationCode,
+          email: user?.email ?? "",
+          amount: finalTotal,
+          reference,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.status) {
+        throw new Error(data.error || "Card charge failed. Please try again.");
+      }
+      await createOrderWithPayment({
+        paymentMethod: "card",
+        paymentStatus: "paid",
+        paystackReference: data.data.reference,
+      });
+    } catch (err: any) {
+      Alert.alert(
+        "Payment Failed",
+        err.message || "Card could not be charged.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ─── Paystack modal success ─────────────────────────────────────────────────
+  const handlePaystackSuccess = async (
+    reference: string,
+    cardDetails: CardDetails,
+  ) => {
+    setShowPaystackModal(false);
+    if (!user) return;
+
+    // Save card to Firebase (only if user opted in)
+    const type = mapToCardType(cardDetails.brand ?? cardDetails.cardType ?? "");
+    if (saveCard) {
+      try {
+        const newMethodId = await addPaymentMethod(user.uid, {
+          type,
+          last4: cardDetails.last4 ?? "",
+          expiryMonth: cardDetails.expiryMonth ?? 0,
+          expiryYear: cardDetails.expiryYear ?? 0,
+          cardholderName: userProfile
+            ? `${userProfile.otherName} ${userProfile.surname}`.trim()
+            : "",
+          bank: cardDetails.bank ?? "",
+          paystackAuthorizationCode: cardDetails.authorizationCode,
+          paystackSignature: cardDetails.signature ?? "",
+          paystackBin: cardDetails.bin ?? "",
+          isPrimary: savedCards.length === 0,
+        });
+
+        const newCard: PaymentMethod = {
+          id: newMethodId,
+          type,
+          last4: cardDetails.last4 ?? "",
+          expiryMonth: cardDetails.expiryMonth ?? 0,
+          expiryYear: cardDetails.expiryYear ?? 0,
+          cardholderName: userProfile
+            ? `${userProfile.otherName} ${userProfile.surname}`.trim()
+            : "",
+          bank: cardDetails.bank ?? "",
+          paystackAuthorizationCode: cardDetails.authorizationCode,
+          paystackSignature: cardDetails.signature ?? "",
+          paystackBin: cardDetails.bin ?? "",
+          isPrimary: savedCards.length === 0,
+          createdAt: Timestamp.now(),
+        };
+
+        setSavedCards((prev) => [newCard, ...prev]);
+        setSelectedCard(newCard);
+      } catch {
+        // Card save failed silently — still create order
+      }
+    }
+
+    await createOrderWithPayment({
+      paymentMethod: "card",
+      paymentStatus: "paid",
+      paystackReference: reference,
+    });
   };
 
   const loadTypeLabels: Record<string, string> = {
@@ -214,6 +353,9 @@ export default function SummaryScreen() {
     document: "Document",
     other: "Other",
   };
+
+  const swipeDisabled =
+    isSubmitting || (checkoutMethod === "card" && !selectedCard);
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50" edges={["top"]}>
@@ -491,7 +633,7 @@ export default function SummaryScreen() {
                       Use referral credits
                     </Text>
                     <Text className="font-sans text-xs text-gray-500">
-                      Balance: {formatNaira(referralCredits)}
+                      Balance: {formatNaira(referralCredits)} · max 50% off
                     </Text>
                   </View>
                 </View>
@@ -519,23 +661,113 @@ export default function SummaryScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Swipe to confirm */}
+      {/* Bottom: Payment selector + swipe confirm */}
       <View
         className="px-5 pt-4 bg-gray-50 border-t border-gray-100"
         style={{ paddingBottom: Platform.OS === "ios" ? 36 : 52 }}
       >
+        {/* Payment method selector */}
+        <View style={{ marginBottom: 16 }}>
+          <Text
+            style={{
+              fontSize: 12,
+              fontFamily: "PolySans-Median",
+              color: "#9CA3AF",
+              marginBottom: 8,
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+            }}
+          >
+            Payment method
+          </Text>
+          <PaymentSelector
+            selectedMethod={checkoutMethod}
+            selectedCard={selectedCard}
+            cards={savedCards}
+            onSelectCash={() => setCheckoutMethod("cash")}
+            onSelectCard={() => setCheckoutMethod("card")}
+            onSelectSavedCard={(card) => {
+              setSelectedCard(card);
+              setCheckoutMethod("card");
+            }}
+            onAddCard={() => setShowPaystackModal(true)}
+          />
+        </View>
+
+        {/* Save card toggle — shown when card is selected and no existing card chosen */}
+        {checkoutMethod === "card" && savedCards.length === 0 && (
+          <Pressable
+            onPress={() => setSaveCard(!saveCard)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: 12,
+              paddingHorizontal: 4,
+            }}
+          >
+            <View
+              style={{
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                borderWidth: 2,
+                borderColor: saveCard ? COLORS.primary : "#D1D5DB",
+                backgroundColor: saveCard ? COLORS.primary : "transparent",
+                alignItems: "center",
+                justifyContent: "center",
+                marginRight: 10,
+              }}
+            >
+              {saveCard && (
+                <TickCircle size={12} color="#FFFFFF" variant="Bold" />
+              )}
+            </View>
+            <Text
+              style={{
+                fontFamily: "PolySans-Neutral",
+                fontSize: 13,
+                color: "#374151",
+              }}
+            >
+              Save card for future payments
+            </Text>
+          </Pressable>
+        )}
+
         {finalTotal > 0 && (
           <Text className="font-sans-bold text-center text-base text-gray-900 mb-3">
             {formatNaira(finalTotal)}
           </Text>
         )}
         <SwipeToConfirm
-          onConfirm={handleConfirmOrder}
+          onConfirm={handleSwipeConfirm}
           label={finalTotal === 0 ? "Swipe to confirm" : "Swipe to pay"}
-          disabled={isSubmitting}
+          disabled={swipeDisabled}
           loading={isSubmitting}
         />
+        {checkoutMethod === "card" && !selectedCard && savedCards.length === 0 && (
+          <Text
+            style={{
+              fontSize: 12,
+              fontFamily: "PolySans-Neutral",
+              color: COLORS.danger,
+              textAlign: "center",
+              marginTop: 8,
+            }}
+          >
+            Add a card to continue with card payment
+          </Text>
+        )}
       </View>
+
+      {/* Paystack payment modal */}
+      <PaystackPaymentModal
+        visible={showPaystackModal}
+        amount={finalTotal}
+        email={user?.email ?? ""}
+        onClose={() => setShowPaystackModal(false)}
+        onSuccess={handlePaystackSuccess}
+      />
     </SafeAreaView>
   );
 }

@@ -4,13 +4,18 @@
     "slug": "goshats",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icons/icon.png",
     "scheme": "goshats",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.goshats.customer",
       "config": {},
+      "icon": {
+        "dark": "./assets/icons/Dark.png",
+        "light": "./assets/icons/Light.png",
+        "tinted": "./assets/icons/Tinted.png"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -19,16 +24,15 @@
       "package": "com.goshats.customer",
       "config": {},
       "adaptiveIcon": {
-        "backgroundColor": "#006B3F",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#264834",
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "monochromeImage": "./assets/icons/adaptive-icon.png"
       }
     },
     "web": {
       "output": "server",
       "bundler": "metro",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/icons/favicon.ico"
     },
     "plugins": [
       [
@@ -40,7 +44,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/icons/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#006B3F"
@@ -55,7 +59,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
+          "icon": "./assets/icons/icon.png",
           "color": "#006B3F"
         }
       ],

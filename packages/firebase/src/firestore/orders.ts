@@ -141,3 +141,43 @@ export async function cancelOrder(
 ): Promise<void> {
   await updateOrderStatus(orderId, "cancelled", reason);
 }
+
+export async function setOrderCustomerRating(
+  orderId: string,
+  ratingId: string
+): Promise<void> {
+  await updateDoc(doc(db, "orders", orderId), {
+    customerRatingId: ratingId,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+const ACTIVE_STATUSES: OrderStatus[] = [
+  "pending",
+  "accepted",
+  "arrived_pickup",
+  "picked_up",
+  "in_transit",
+];
+
+export function listenToActiveOrder(
+  customerId: string,
+  callback: (order: Order | null) => void
+): Unsubscribe {
+  const q = query(
+    ordersRef,
+    where("customerId", "==", customerId),
+    where("status", "in", ACTIVE_STATUSES),
+    orderBy("createdAt", "desc"),
+    limit(1)
+  );
+
+  return onSnapshot(q, (snap) => {
+    if (snap.empty) {
+      callback(null);
+      return;
+    }
+    const doc = snap.docs[0];
+    callback({ id: doc.id, ...doc.data() } as Order);
+  });
+}

@@ -8,6 +8,7 @@ export function useOrders(pageSize: number = 20) {
   const user = useAuthStore((s) => s.user);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
@@ -16,6 +17,7 @@ export function useOrders(pageSize: number = 20) {
       if (!user || isLoading) return;
 
       setIsLoading(true);
+      setError(null);
       try {
         const result = await getUserOrders(
           user.uid,
@@ -31,8 +33,8 @@ export function useOrders(pageSize: number = 20) {
 
         setLastDoc(result.lastDoc);
         setHasMore(result.orders.length === pageSize);
-      } catch (err) {
-        console.error("Error loading orders:", err);
+      } catch (err: any) {
+        setError(err.message || "Failed to load orders");
       } finally {
         setIsLoading(false);
       }
@@ -46,5 +48,5 @@ export function useOrders(pageSize: number = 20) {
     return loadMore(true);
   }, [loadMore]);
 
-  return { orders, isLoading, loadMore: () => loadMore(), refresh, hasMore };
+  return { orders, isLoading, error, loadMore: () => loadMore(), refresh, hasMore };
 }

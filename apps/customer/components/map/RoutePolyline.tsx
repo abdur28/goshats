@@ -1,16 +1,21 @@
+import { COLORS } from "@/constants/theme";
+import { formatDistance, formatDuration } from "@/lib/format";
+import { getDirectionsWithCoordinates } from "@/lib/maps";
+import { Location } from "iconsax-react-native";
 import React, { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { Marker, Polyline } from "react-native-maps";
-import { Location } from "iconsax-react-native";
-import { COLORS } from "@/constants/theme";
-import { getDirectionsWithCoordinates } from "@/lib/maps";
-import { formatDistance, formatDuration } from "@/lib/format";
 
 interface RoutePolylineProps {
   pickup: { latitude: number; longitude: number };
   dropoff: { latitude: number; longitude: number };
   waypoints?: { latitude: number; longitude: number }[];
   showInfoChip?: boolean;
+  hidePickupMarker?: boolean;
+  onRouteInfo?: (info: {
+    distanceMeters: number;
+    durationSeconds: number;
+  }) => void;
 }
 
 export default function RoutePolyline({
@@ -18,6 +23,8 @@ export default function RoutePolyline({
   dropoff,
   waypoints,
   showInfoChip = true,
+  hidePickupMarker = false,
+  onRouteInfo,
 }: RoutePolylineProps) {
   const [coordinates, setCoordinates] = useState<
     { latitude: number; longitude: number }[]
@@ -34,11 +41,15 @@ export default function RoutePolyline({
       const result = await getDirectionsWithCoordinates(
         pickup,
         dropoff,
-        waypoints
+        waypoints,
       );
       if (!cancelled && result) {
         setCoordinates(result.coordinates);
         setRouteInfo({
+          distanceMeters: result.distanceMeters,
+          durationSeconds: result.durationSeconds,
+        });
+        onRouteInfo?.({
           distanceMeters: result.distanceMeters,
           durationSeconds: result.durationSeconds,
         });
@@ -63,39 +74,22 @@ export default function RoutePolyline({
       )}
 
       {/* Pickup marker */}
-      <Marker coordinate={pickup} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-        <View
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 16,
-            backgroundColor: COLORS.primary,
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 2,
-            borderColor: "#FFFFFF",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.15,
-            shadowRadius: 2,
-            elevation: 3,
-          }}
+      {!hidePickupMarker && (
+        <Marker
+          coordinate={pickup}
+          anchor={{ x: 0.5, y: 0.5 }}
+          tracksViewChanges={false}
         >
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: "#FFFFFF" }} />
-        </View>
-      </Marker>
-
-      {/* Dropoff marker */}
-      <Marker coordinate={dropoff} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
-        <View style={{ alignItems: "center" }}>
           <View
             style={{
-              backgroundColor: "#FFFFFF",
+              width: 32,
+              height: 32,
               borderRadius: 16,
-              paddingHorizontal: 10,
-              paddingVertical: 6,
+              backgroundColor: COLORS.primary,
+              alignItems: "center",
+              justifyContent: "center",
               borderWidth: 2,
-              borderColor: COLORS.accent,
+              borderColor: "#FFFFFF",
               shadowColor: "#000",
               shadowOffset: { width: 0, height: 1 },
               shadowOpacity: 0.15,
@@ -103,23 +97,42 @@ export default function RoutePolyline({
               elevation: 3,
             }}
           >
-            <Location size={18} color={COLORS.accent} variant="Bold" />
+            <View
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                backgroundColor: "#FFFFFF",
+              }}
+            />
           </View>
-          <View
-            style={{
-              width: 0,
-              height: 0,
-              backgroundColor: "transparent",
-              borderStyle: "solid",
-              borderLeftWidth: 6,
-              borderRightWidth: 6,
-              borderTopWidth: 7,
-              borderLeftColor: "transparent",
-              borderRightColor: "transparent",
-              borderTopColor: COLORS.accent,
-              marginTop: -1,
-            }}
-          />
+        </Marker>
+      )}
+
+      {/* Dropoff marker */}
+      <Marker
+        coordinate={dropoff}
+        anchor={{ x: 0.5, y: 0.5 }}
+        tracksViewChanges={false}
+      >
+        <View
+          style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: 20,
+            width: 42,
+            height: 42,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 2.5,
+            borderColor: COLORS.accent,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 4,
+            elevation: 4,
+          }}
+        >
+          <Location size={22} color={COLORS.accent} variant="Bold" />
         </View>
       </Marker>
 
@@ -144,7 +157,13 @@ export default function RoutePolyline({
               elevation: 3,
             }}
           >
-            <Text style={{ fontFamily: "PolySans-Bulky", fontSize: 10, color: COLORS.primary }}>
+            <Text
+              style={{
+                fontFamily: "PolySans-Bulky",
+                fontSize: 10,
+                color: COLORS.primary,
+              }}
+            >
               {i + 1}
             </Text>
           </View>
@@ -175,11 +194,31 @@ export default function RoutePolyline({
               alignItems: "center",
             }}
           >
-            <Text style={{ fontFamily: "PolySans-Bulky", fontSize: 12, color: COLORS.primary }}>
+            <Text
+              style={{
+                fontFamily: "PolySans-Bulky",
+                fontSize: 12,
+                color: COLORS.primary,
+              }}
+            >
               {formatDistance(routeInfo.distanceMeters)}
             </Text>
-            <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: "#D1D5DB", marginHorizontal: 8 }} />
-            <Text style={{ fontFamily: "PolySans-Median", fontSize: 12, color: "#4B5563" }}>
+            <View
+              style={{
+                width: 4,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: "#D1D5DB",
+                marginHorizontal: 8,
+              }}
+            />
+            <Text
+              style={{
+                fontFamily: "PolySans-Median",
+                fontSize: 12,
+                color: "#4B5563",
+              }}
+            >
               {formatDuration(routeInfo.durationSeconds)}
             </Text>
           </View>

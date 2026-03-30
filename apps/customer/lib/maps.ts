@@ -23,7 +23,7 @@ export interface DirectionsResult {
 
 export async function getPlaceSuggestions(
   input: string,
-  location?: { latitude: number; longitude: number }
+  location?: { latitude: number; longitude: number },
 ): Promise<PlaceSuggestion[]> {
   if (!input || input.length < 2) return [];
 
@@ -39,7 +39,7 @@ export async function getPlaceSuggestions(
   }
 
   const response = await fetch(
-    `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`
+    `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`,
   );
   const data = await response.json();
 
@@ -54,7 +54,7 @@ export async function getPlaceSuggestions(
 }
 
 export async function getPlaceDetails(
-  placeId: string
+  placeId: string,
 ): Promise<PlaceDetails | null> {
   const params = new URLSearchParams({
     place_id: placeId,
@@ -63,7 +63,7 @@ export async function getPlaceDetails(
   });
 
   const response = await fetch(
-    `https://maps.googleapis.com/maps/api/place/details/json?${params}`
+    `https://maps.googleapis.com/maps/api/place/details/json?${params}`,
   );
   const data = await response.json();
 
@@ -81,7 +81,7 @@ export async function getPlaceDetails(
 export async function getDirections(
   origin: { latitude: number; longitude: number },
   destination: { latitude: number; longitude: number },
-  waypoints?: { latitude: number; longitude: number }[]
+  waypoints?: { latitude: number; longitude: number }[],
 ): Promise<DirectionsResult | null> {
   const params = new URLSearchParams({
     origin: `${origin.latitude},${origin.longitude}`,
@@ -93,12 +93,12 @@ export async function getDirections(
   if (waypoints && waypoints.length > 0) {
     params.set(
       "waypoints",
-      `optimize:true|${waypoints.map((w) => `${w.latitude},${w.longitude}`).join("|")}`
+      `optimize:true|${waypoints.map((w) => `${w.latitude},${w.longitude}`).join("|")}`,
     );
   }
 
   const response = await fetch(
-    `https://maps.googleapis.com/maps/api/directions/json?${params}`
+    `https://maps.googleapis.com/maps/api/directions/json?${params}`,
   );
   const data = await response.json();
 
@@ -116,7 +116,7 @@ export async function getDirections(
 
 export async function calculateRouteDistance(
   origin: { latitude: number; longitude: number },
-  destination: { latitude: number; longitude: number }
+  destination: { latitude: number; longitude: number },
 ): Promise<{ distanceMeters: number; durationSeconds: number } | null> {
   const result = await getDirections(origin, destination);
   if (!result) return null;
@@ -131,7 +131,7 @@ export async function calculateRouteDistance(
  * Standard algorithm: https://developers.google.com/maps/documentation/utilities/polylinealgorithm
  */
 export function decodePolyline(
-  encoded: string
+  encoded: string,
 ): { latitude: number; longitude: number }[] {
   const points: { latitude: number; longitude: number }[] = [];
   let index = 0;
@@ -174,7 +174,7 @@ export function decodePolyline(
 export async function getDirectionsWithCoordinates(
   origin: { latitude: number; longitude: number },
   destination: { latitude: number; longitude: number },
-  waypoints?: { latitude: number; longitude: number }[]
+  waypoints?: { latitude: number; longitude: number }[],
 ): Promise<{
   distanceMeters: number;
   durationSeconds: number;

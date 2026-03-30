@@ -1,12 +1,15 @@
+import { COLORS } from "@/constants/theme";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
-import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import RoutePolyline from "./RoutePolyline";
 
 interface BookingMapViewProps {
   pickup: { latitude: number; longitude: number };
   dropoff: { latitude: number; longitude: number };
   waypoints?: { latitude: number; longitude: number }[];
+  riderLocation?: { latitude: number; longitude: number };
   className?: string;
 }
 
@@ -14,6 +17,7 @@ export default function BookingMapView({
   pickup,
   dropoff,
   waypoints,
+  riderLocation,
   className = "",
 }: BookingMapViewProps) {
   const mapRef = useRef<MapView>(null);
@@ -61,6 +65,28 @@ export default function BookingMapView({
           waypoints={waypoints}
           showInfoChip
         />
+        {riderLocation && (
+          <Marker coordinate={riderLocation} anchor={{ x: 0.5, y: 0.5 }}>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: COLORS.primary,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 2,
+                borderColor: "#fff",
+              }}
+            >
+              <MaterialCommunityIcons
+                name="motorbike"
+                size={18}
+                color="#fff"
+              />
+            </View>
+          </Marker>
+        )}
       </MapView>
     </View>
   );

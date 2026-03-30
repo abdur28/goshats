@@ -12,7 +12,7 @@ export type OrderStatus =
 
 export type LoadType = "food" | "parcel" | "document" | "other";
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
-export type PaymentMethodType = "card" | "referral_credits";
+export type PaymentMethodType = "cash" | "card";
 export type ConditionAtPickup = "good" | "damaged" | "refused";
 
 export interface DeliveryStop {
@@ -60,6 +60,7 @@ export interface Order {
   fareAmountKobo: number;
   bookingFeeKobo: number;
   promoDiscountKobo: number;
+  referralCreditsAppliedKobo: number;
   tipAmountKobo: number;
   totalAmountKobo: number;
 

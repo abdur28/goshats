@@ -47,7 +47,7 @@ export default function AboutScreen() {
         <View className="items-center pt-10 pb-6">
           <View className="w-24 h-24 rounded-3xl bg-primary items-center justify-center mb-4 shadow-sm">
             <Image
-              source={require("@/assets/images/icon.png")}
+              source={require("@/assets/icons/icon.png")}
               style={{ width: 100, height: 100, borderRadius: 20 }}
               resizeMode="contain"
             />

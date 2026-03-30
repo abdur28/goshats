@@ -16,9 +16,9 @@ export function Header({ title, onBack, rightAction, className = "" }: HeaderPro
         {onBack && (
           <Pressable
             onPress={onBack}
-            className="w-10 h-10 items-center justify-center rounded-full active:opacity-80"
+            className="w-10 h-10 items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 active:bg-gray-50"
           >
-            <Ionicons name="chevron-back" size={24} color="#111827" />
+            <Ionicons name="chevron-back" size={20} color="#111827" style={{ marginLeft: -2 }} />
           </Pressable>
         )}
       </View>
