@@ -1,37 +1,23 @@
 import PaystackPaymentModal, {
   CardDetails,
 } from "@/components/payment/PaystackPaymentModal";
-import { COLORS } from "@/constants/theme";
-import { Skeleton } from "@goshats/ui";
 import { useAuthStore } from "@/store/auth-store";
 import {
-  addPaymentMethod,
+  db,
   getPaymentMethods,
   removePaymentMethod,
   setPrimaryPaymentMethod,
 } from "@goshats/firebase";
 import type { PaymentMethod } from "@goshats/types";
-import { Header } from "@goshats/ui";
+import { Header, Skeleton } from "@goshats/ui";
 import { router } from "expo-router";
+import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { Add, CardPos, Trash } from "iconsax-react-native";
 import { useEffect, useState } from "react";
-import {
-  Alert,
-  FlatList,
-  Pressable,
-  Text,
-  View,
-} from "react-native";
+import { Alert, FlatList, Pressable, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-function mapToCardType(brand: string): "mastercard" | "visa" | "verve" {
-  const b = (brand ?? "").toLowerCase();
-  if (b.includes("visa")) return "visa";
-  if (b.includes("verve")) return "verve";
-  return "mastercard";
-}
 
 const getCardBrandName = (type: PaymentMethod["type"]) => {
   switch (type) {
@@ -74,17 +60,40 @@ const getCardStyle = (type: PaymentMethod["type"]) => {
 };
 
 export default function PaymentsScreen() {
-  const { user, userProfile } = useAuthStore();
+  const { user } = useAuthStore();
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddCard, setShowAddCard] = useState(false);
 
+  // Real-time listener for payment methods — auto-updates when webhook saves a card
   useEffect(() => {
     if (!user) return;
+
+    // Initial load
     getPaymentMethods(user.uid)
       .then(setMethods)
-      .catch(() => Alert.alert("Error", "Could not load payment methods. Please try again."))
+      .catch(() =>
+        Alert.alert(
+          "Error",
+          "Could not load payment methods. Please try again.",
+        ),
+      )
       .finally(() => setLoading(false));
+
+    // Live listener for real-time updates (webhook-saved cards appear automatically)
+    const q = query(
+      collection(db, "users", user.uid, "paymentMethods"),
+      orderBy("createdAt", "desc"),
+    );
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const cards = snap.docs.map(
+        (d) => ({ id: d.id, ...d.data() }) as PaymentMethod,
+      );
+      setMethods(cards);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [user]);
 
   const handleDelete = (id: string) => {
@@ -110,29 +119,19 @@ export default function PaymentsScreen() {
     setMethods((prev) => prev.map((m) => ({ ...m, isPrimary: m.id === id })));
   };
 
+  // Card save is handled server-side via webhook.
+  // The ₦50 charge triggers charge.success → webhook saves card + credits ₦50.
   const handleAddCardSuccess = async (
     _reference: string,
-    cardDetails: CardDetails,
+    _cardDetails: CardDetails,
   ) => {
-    if (!user) return;
-    const type = mapToCardType(cardDetails.brand ?? cardDetails.cardType ?? "");
-    await addPaymentMethod(user.uid, {
-      type,
-      last4: cardDetails.last4 ?? "",
-      expiryMonth: cardDetails.expiryMonth ?? 0,
-      expiryYear: cardDetails.expiryYear ?? 0,
-      cardholderName: userProfile
-        ? `${userProfile.otherName} ${userProfile.surname}`.trim()
-        : "",
-      bank: cardDetails.bank ?? "",
-      paystackAuthorizationCode: cardDetails.authorizationCode,
-      paystackSignature: cardDetails.signature ?? "",
-      paystackBin: cardDetails.bin ?? "",
-      isPrimary: methods.length === 0,
-    });
-    const refreshed = await getPaymentMethods(user.uid);
-    setMethods(refreshed);
     setShowAddCard(false);
+    // Cards will auto-appear via the onSnapshot listener above.
+    // Show feedback to user.
+    Alert.alert(
+      "Card Saved! 💳",
+      "Your card has been saved and ₦50 has been credited to your wallet.",
+    );
   };
 
   const renderRightActions = (id: string) => (
@@ -155,7 +154,10 @@ export default function PaymentsScreen() {
         overshootRight={false}
         containerStyle={{ marginBottom: 24 }}
       >
-        <Pressable onPress={() => handleSetPrimary(item.id)} style={{ opacity: 1 }}>
+        <Pressable
+          onPress={() => handleSetPrimary(item.id)}
+          style={{ opacity: 1 }}
+        >
           <View
             className="w-full min-h-[200px] rounded-[24px] p-6 relative overflow-hidden"
             style={style.bgStyle}
@@ -259,7 +261,12 @@ export default function PaymentsScreen() {
         {loading ? (
           <View style={{ padding: 24 }}>
             {[0, 1].map((i) => (
-              <Skeleton key={i} height={200} borderRadius={24} style={{ marginBottom: 24 }} />
+              <Skeleton
+                key={i}
+                height={200}
+                borderRadius={24}
+                className="mb-6"
+              />
             ))}
           </View>
         ) : methods.length === 0 ? (

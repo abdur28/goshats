@@ -4,12 +4,13 @@ import { COLORS } from "@/constants/theme";
 import { useOrder } from "@/hooks/use-order";
 import { useRider } from "@/hooks/use-rider";
 import { formatNaira } from "@/lib/format";
+import { useAuthStore } from "@/store/auth-store";
 import { useOrderStore } from "@/store/order-store";
 import { cancelOrder } from "@goshats/firebase";
 import { Avatar } from "@goshats/ui";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Call, Message, Star1 } from "iconsax-react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -46,6 +47,7 @@ export default function TrackingScreen() {
   const rider = useRider(order?.riderId);
   const [cancelling, setCancelling] = useState(false);
   const { clearActiveOrder } = useOrderStore();
+  const { user } = useAuthStore();
 
   const isActive = ACTIVE_STATUSES.has(order?.status ?? "");
   const isDelivered = order?.status === "delivered";
@@ -55,6 +57,51 @@ export default function TrackingScreen() {
     clearActiveOrder();
     router.replace("/(tabs)" as any);
   };
+
+  // 30-minute auto-cancellation for pending orders
+  useEffect(() => {
+    if (!order || order.status !== "pending") return;
+
+    const createdAt = order.createdAt;
+    let createdTime = 0;
+    if (createdAt && typeof (createdAt as any).toMillis === "function") {
+      createdTime = (createdAt as any).toMillis();
+    } else if (createdAt instanceof Date) {
+      createdTime = createdAt.getTime();
+    }
+
+    if (!createdTime) return;
+
+    let timer: NodeJS.Timeout;
+
+    const checkTime = async () => {
+      const elapsed = Date.now() - createdTime;
+      const thirtyMins = 30 * 60 * 1000;
+
+      if (elapsed >= thirtyMins) {
+        try {
+          await cancelOrder(order.id, "No rider available within 30 minutes");
+          Alert.alert(
+            "Order Auto-Cancelled",
+            "No riders were available to accept your order. Please try again later."
+          );
+        } catch {
+          Alert.alert(
+            "Cancellation Failed",
+            "Your order could not be auto-cancelled. Please contact support."
+          );
+        }
+      } else {
+        timer = setTimeout(checkTime, thirtyMins - elapsed);
+      }
+    };
+
+    checkTime();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [order, order?.status, order?.createdAt, order?.id]);
 
   if (isLoading) {
     return (
@@ -72,38 +119,30 @@ export default function TrackingScreen() {
     );
   }
 
-  if (!order) {
-    return (
-      <SafeAreaView
-        style={{ flex: 1, backgroundColor: "#F9FAFB" }}
-        edges={["top"]}
+  const notFoundScreen = (
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#F9FAFB" }} edges={["top"]}>
+      <Pressable
+        onPress={() => router.back()}
+        style={{
+          margin: 20, width: 40, height: 40, borderRadius: 20,
+          backgroundColor: "#fff", alignItems: "center", justifyContent: "center",
+          borderWidth: 1, borderColor: "#F3F4F6",
+        }}
       >
-        <Pressable
-          onPress={() => router.back()}
-          style={{
-            margin: 20,
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            backgroundColor: "#fff",
-            alignItems: "center",
-            justifyContent: "center",
-            borderWidth: 1,
-            borderColor: "#F3F4F6",
-          }}
-        >
-          <ArrowLeft size={20} color="#111827" />
-        </Pressable>
-        <View
-          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-        >
-          <Text style={{ fontFamily: "PolySans-Neutral", color: "#6B7280" }}>
-            Order not found.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+        <ArrowLeft size={20} color="#111827" />
+      </Pressable>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ fontFamily: "PolySans-Neutral", color: "#6B7280" }}>
+          Order not found.
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+
+  if (!order) return notFoundScreen;
+
+  // Prevent users from viewing orders that don't belong to them
+  if (user && order.customerId !== user.uid) return notFoundScreen;
 
   const handleCancel = () => {
     Alert.alert("Cancel Order", "Are you sure you want to cancel this order?", [
@@ -134,6 +173,8 @@ export default function TrackingScreen() {
           orderId={id ?? null}
           destination={order.dropoff.location}
           pickup={order.pickup.location}
+          status={order.status}
+          riderLocation={rider?.currentLocation ?? undefined}
         />
 
         {/* Back button overlaid on map */}

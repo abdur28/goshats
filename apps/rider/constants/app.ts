@@ -36,3 +36,9 @@ export const DEFAULT_MAP_REGION = {
 };
 
 export const LOCATION_BROADCAST_INTERVAL = 5000;
+
+export const SUPPORT_EMAIL = "riders@goshats.com";
+export const SUPPORT_PHONE = "+2348000000000"; // TODO: replace with real support number before launch
+export const SUPPORT_PHONE_DISPLAY = "0800 000 0000";
+
+export const COMPANY_NAME = "GoShats";

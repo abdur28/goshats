@@ -6,7 +6,8 @@ export async function getAppleCredential(): Promise<{
   nonce: string;
 } | null> {
   try {
-    const nonce = Math.random().toString(36).substring(2, 10);
+    const nonceBytes = Crypto.getRandomBytes(16);
+    const nonce = Array.from(nonceBytes, (b) => b.toString(16).padStart(2, "0")).join("");
     const hashedNonce = await Crypto.digestStringAsync(
       Crypto.CryptoDigestAlgorithm.SHA256,
       nonce

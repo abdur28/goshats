@@ -13,7 +13,7 @@ export default function RootGroupLayout() {
   if (!authInitialized) return null;
 
   if (!isAuthenticated) {
-    return <Redirect href="/(auth)/sign-in" />;
+    return <Redirect href="/(auth)/welcome" />;
   }
 
   return (

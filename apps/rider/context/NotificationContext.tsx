@@ -11,6 +11,7 @@ import {
   listenToNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteNotification,
   setupNotificationHandler,
   addNotificationResponseListener,
 } from "@goshats/firebase";
@@ -23,6 +24,7 @@ interface NotificationContextType {
   unreadCount: number;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
+  removeNotification: (id: string) => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -47,7 +49,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       }
     })();
 
-    const unsubscribe = listenToNotifications(user.uid, setNotifications);
+    const unsubscribe = listenToNotifications(
+      "riders",
+      user.uid,
+      setNotifications
+    );
 
     const subscription = addNotificationResponseListener(
       handleNotificationResponse
@@ -62,17 +68,29 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const markRead = async (id: string) => {
-    await markNotificationRead(id);
+    if (!user) return;
+    await markNotificationRead("riders", user.uid, id);
   };
 
   const markAllRead = async () => {
     if (!user) return;
-    await markAllNotificationsRead(user.uid);
+    await markAllNotificationsRead("riders", user.uid);
+  };
+
+  const removeNotification = async (id: string) => {
+    if (!user) return;
+    await deleteNotification("riders", user.uid, id);
   };
 
   return (
     <NotificationContext.Provider
-      value={{ notifications, unreadCount, markRead, markAllRead }}
+      value={{
+        notifications,
+        unreadCount,
+        markRead,
+        markAllRead,
+        removeNotification,
+      }}
     >
       {children}
     </NotificationContext.Provider>

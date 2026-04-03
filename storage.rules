@@ -12,12 +12,22 @@ service firebase.storage {
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Dispute photos — order parties can upload, read restricted to parties + admin
-    match /dispute-photos/{orderId}/{allPaths=**} {
+    // Dispute photos — any authenticated user can read (Firestore rules protect order access).
+    // Write path embeds the uploader's UID so only they can write to their own subfolder.
+    match /dispute-photos/{orderId}/{userId}/{fileName} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
+        && request.auth.uid == userId
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
+    }
+
+    // Rider verification documents — rider can upload/read/delete their own
+    match /rider-documents/{uid}/{allPaths=**} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf');
     }
   }
 }

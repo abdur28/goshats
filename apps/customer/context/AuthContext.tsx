@@ -210,7 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signOutGoogle();
       await signOutUser();
       store.clearAuth();
-      router.replace("/(auth)/sign-in");
+      router.replace("/(auth)/welcome");
     } catch (err: any) {
       store.setError(err.message || "Failed to sign out");
     } finally {

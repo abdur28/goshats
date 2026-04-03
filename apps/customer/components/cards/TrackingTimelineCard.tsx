@@ -1,6 +1,6 @@
 import type { Order } from "@goshats/types";
 import { TruckFast } from "iconsax-react-native";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 const STATUS_STEP: Record<string, number> = {
   pending: 0,
@@ -47,57 +47,60 @@ export const TrackingTimelineCard = ({
   return (
     <Pressable
       onPress={onPress}
-      className="bg-white rounded-[24px] p-4 mb-2 border border-[#DAA520]/20 shadow-sm active:opacity-90"
+      style={({ pressed }) => [styles.card, pressed && { opacity: 0.9 }]}
     >
-      <View className="flex-row justify-between items-end mb-4">
-        <View className="w-[70%]">
-          <Text className="text-[10px] font-sans-bold text-[#DAA520] uppercase tracking-widest mb-1 mt-1">
-            {statusLabel}
-          </Text>
-          <Text
-            className="text-[15px] font-sans-black text-gray-900 leading-tight"
-            numberOfLines={1}
-          >
+      <View style={styles.headerRow}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.statusLabel}>{statusLabel}</Text>
+          <Text style={styles.addressText} numberOfLines={1}>
             {order.dropoff?.address}
           </Text>
         </View>
         {etaLabel && (
-          <View className="bg-[#DAA520]/10 px-2.5 py-1.5 rounded-[8px]">
-            <Text className="text-[10px] font-sans-bold tracking-widest text-[#DAA520] uppercase">
-              {etaLabel}
-            </Text>
+          <View style={styles.etaBadge}>
+            <Text style={styles.etaText}>{etaLabel}</Text>
           </View>
         )}
       </View>
 
       {/* Timeline graphic container */}
-      <View className="px-1 mt-2">
-        <View className="relative">
+      <View style={styles.timelineContainer}>
+        <View style={styles.relativeWrap}>
           {/* Line Background */}
-          <View className="absolute left-[5%] right-[5%] h-[3px] bg-gray-100 top-[14px] rounded-full" />
+          <View style={styles.lineBackground} />
           <View
-            style={{ width: `${progressPct * 0.9}%` }}
-            className="absolute left-[5%] h-[3px] bg-[#DAA520] top-[14px] rounded-full"
+            style={[
+              styles.lineProgress,
+              { width: `${progressPct * 0.9}%` as any },
+            ]}
           />
 
-          <View className="flex-row justify-between">
+          <View style={styles.stepsRow}>
             {(["Booked", "Pickup", "Transit", "Dropoff"] as const).map(
               (label, idx) => {
                 const done = idx < step;
                 const isCurrent = idx === step;
                 return (
-                  <View key={label} className="items-center w-14 z-10">
+                  <View key={label} style={styles.stepItem}>
                     {isCurrent ? (
-                      <View className="w-10 h-10 bg-[#DAA520] border-2 border-white rounded-full items-center justify-center mb-0.5 shadow-sm">
+                      <View style={styles.currentDot}>
                         <TruckFast size={18} color="#FFF" variant="Bold" />
                       </View>
                     ) : (
                       <View
-                        className={`w-3.5 h-3.5 rounded-full border-2 border-white mb-2 mt-[8px] ${done ? "bg-[#DAA520]" : "bg-gray-200"}`}
+                        style={[
+                          styles.dot,
+                          done ? styles.dotDone : styles.dotFuture,
+                        ]}
                       />
                     )}
                     <Text
-                      className={`text-[8px] font-sans-bold uppercase tracking-widest ${isCurrent || done ? "text-[#DAA520]" : "text-gray-400"}`}
+                      style={[
+                        styles.stepLabel,
+                        isCurrent || done
+                          ? styles.stepLabelActive
+                          : styles.stepLabelInactive,
+                      ]}
                     >
                       {label}
                     </Text>
@@ -111,3 +114,132 @@ export const TrackingTimelineCard = ({
     </Pressable>
   );
 };
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(218,165,32,0.2)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginBottom: 16,
+  },
+  headerLeft: {
+    width: "70%",
+  },
+  statusLabel: {
+    fontSize: 10,
+    fontFamily: "PolySans-Bulky",
+    color: "#DAA520",
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  addressText: {
+    fontSize: 15,
+    fontFamily: "PolySans-Bulky",
+    color: "#111827",
+    lineHeight: 20,
+  },
+  etaBadge: {
+    backgroundColor: "rgba(218,165,32,0.1)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  etaText: {
+    fontSize: 10,
+    fontFamily: "PolySans-Bulky",
+    letterSpacing: 1.5,
+    color: "#DAA520",
+    textTransform: "uppercase",
+  },
+  timelineContainer: {
+    paddingHorizontal: 4,
+    marginTop: 8,
+  },
+  relativeWrap: {
+    position: "relative",
+  },
+  lineBackground: {
+    position: "absolute",
+    left: "5%",
+    right: "5%",
+    height: 3,
+    backgroundColor: "#F3F4F6",
+    top: 14,
+    borderRadius: 4,
+  },
+  lineProgress: {
+    position: "absolute",
+    left: "5%",
+    height: 3,
+    backgroundColor: "#DAA520",
+    top: 14,
+    borderRadius: 4,
+  },
+  stepsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  stepItem: {
+    alignItems: "center",
+    width: 56,
+    zIndex: 10,
+  },
+  currentDot: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#DAA520",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  dot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  dotDone: {
+    backgroundColor: "#DAA520",
+  },
+  dotFuture: {
+    backgroundColor: "#E5E7EB",
+  },
+  stepLabel: {
+    fontSize: 8,
+    fontFamily: "PolySans-Bulky",
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+  },
+  stepLabelActive: {
+    color: "#DAA520",
+  },
+  stepLabelInactive: {
+    color: "#9CA3AF",
+  },
+});

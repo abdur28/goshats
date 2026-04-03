@@ -1,7 +1,7 @@
 import { COLORS } from "@/constants/theme";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { listenToTracking } from "@goshats/firebase";
-import type { TrackingPoint } from "@goshats/types";
+import type { OrderStatus, TrackingPoint } from "@goshats/types";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
@@ -12,7 +12,7 @@ interface TrackingMapViewProps {
   destination: { latitude: number; longitude: number };
   pickup?: { latitude: number; longitude: number };
   riderLocation?: { latitude: number; longitude: number };
-  className?: string;
+  status?: OrderStatus;
 }
 
 function RiderMarkerIcon() {
@@ -65,7 +65,7 @@ export default function TrackingMapView({
   destination,
   pickup,
   riderLocation,
-  className = "",
+  status,
 }: TrackingMapViewProps) {
   const mapRef = useRef<MapView>(null);
   const [riderPosition, setRiderPosition] = useState<TrackingPoint | null>(
@@ -127,10 +127,14 @@ export default function TrackingMapView({
     );
   }, [pickupLat, pickupLng, hasRider]);
 
+  const routeTarget =
+    status === "accepted" || status === "arrived_pickup"
+      ? pickup ?? destination
+      : destination;
+
   return (
     <View
-      style={{ flex: 1 }}
-      className={`overflow-hidden rounded-[24px] ${className}`}
+      style={{ flex: 1, overflow: "hidden", borderRadius: 24 }}
     >
       <MapView
         ref={mapRef}
@@ -154,7 +158,7 @@ export default function TrackingMapView({
         {riderCoord && (
           <RoutePolyline
             pickup={riderCoord}
-            dropoff={destination}
+            dropoff={routeTarget}
             hidePickupMarker
             onRouteInfo={(info) => setEtaSeconds(info.durationSeconds)}
           />

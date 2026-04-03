@@ -4,29 +4,47 @@
     "slug": "goshats-rider",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icons/icon.png",
     "scheme": "goshats-rider",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.goshats.rider"
+      "bundleIdentifier": "com.goshats.rider",
+      "config": {},
+      "icon": {
+        "dark": "./assets/icons/Dark.png",
+        "light": "./assets/icons/Light.png",
+        "tinted": "./assets/icons/Tinted.png"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.goshats.rider",
+      "config": {},
       "adaptiveIcon": {
-        "backgroundColor": "#006B3F"
+        "backgroundColor": "#006B3F",
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "monochromeImage": "./assets/icons/adaptive-icon.png"
       }
     },
     "web": {
       "output": "static",
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/icons/favicon.ico"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "origin": "https://goshats.expo.app/"
+        }
+      ],
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/icons/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#006B3F"
@@ -35,22 +53,48 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow GO SHATS Rider to use your location to broadcast your position during deliveries.",
-          "isAndroidBackgroundLocationEnabled": true
+          "locationWhenInUsePermission": "Allow GO SHATS Rider to use your location to broadcast your position during deliveries.",
+          "locationAlwaysAndWhenInUsePermission": "Allow GO SHATS Rider to always use your location so your position can be broadcast to customers during active deliveries, even when the app is in the background.",
+          "locationAlwaysPermission": "Allow GO SHATS Rider to always use your location so your position can be broadcast to customers during active deliveries, even when the app is in the background.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [
         "expo-notifications",
         {
+          "icon": "./assets/icons/icon.png",
           "color": "#006B3F"
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GO SHATS Rider to access your photo library to update your profile picture."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {}
+      ],
+      "react-native-maps",
       "expo-apple-authentication",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      "expo-font",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "origin": "https://goshats.expo.app/"
+      },
+      "eas": {
+        "projectId": "f65a3f70-ceae-41ce-b687-fa3beb148b93"
+      }
     }
   }
 }

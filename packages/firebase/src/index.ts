@@ -10,6 +10,7 @@ export * from "./firestore";
 // Storage
 export {
   uploadProfilePhoto,
+  uploadRiderDocument,
   uploadDisputePhoto,
   deletePhoto,
 } from "./storage";

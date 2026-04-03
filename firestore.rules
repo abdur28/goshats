@@ -39,7 +39,8 @@ service cloud.firestore {
 
     // ── Users ────────────────────────────────────────────────
     match /users/{uid} {
-      allow read: if isOwner(uid);
+      // Any authenticated user can read profiles (riders need customer info, etc.)
+      allow read: if isAuth();
       allow create: if isOwner(uid);
       allow update: if isOwner(uid);
 
@@ -48,9 +49,14 @@ service cloud.firestore {
         allow read, write: if isOwner(uid);
       }
 
-      // Payment methods — read only from client, writes via Cloud Functions
+      // Payment methods — creation via Cloud Functions, client can read/update/delete
       match /paymentMethods/{methodId} {
-        allow read: if isOwner(uid);
+        allow read, write: if isOwner(uid);
+      }
+
+      // Notifications subcollection — written by Cloud Functions, client can read/update/delete
+      match /notifications/{notificationId} {
+        allow read, update, delete: if isOwner(uid);
       }
     }
 
@@ -61,6 +67,21 @@ service cloud.firestore {
       // Riders can create and update their own profile
       allow create: if isOwner(uid);
       allow update: if isOwner(uid);
+
+      // Payout bank accounts — rider owns these entirely
+      match /payoutDetails/{detailId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Verification documents — rider can upload/delete, admin can approve/reject
+      match /documents/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // Notifications subcollection — written by Cloud Functions, rider can read/update/delete
+      match /notifications/{notificationId} {
+        allow read, update, delete: if isOwner(uid);
+      }
     }
 
     // ── Orders ───────────────────────────────────────────────
@@ -129,15 +150,20 @@ service cloud.firestore {
       allow create: if isAuth() && request.resource.data.referredId == request.auth.uid;
     }
 
-    // ── Notifications ────────────────────────────────────────
-    match /notifications/{notificationId} {
+    // ── Payment Receipts ─────────────────────────────────────
+    match /payment_receipts/{receiptId} {
       allow read: if isAuth() && resource.data.userId == request.auth.uid;
-      allow update: if isAuth() && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Rider Payouts ────────────────────────────────────────
+    match /rider_payouts/{payoutId} {
+      allow read: if isAuth() && resource.data.riderId == request.auth.uid;
     }
 
     // ── Settings ─────────────────────────────────────────────
     match /settings/{document} {
-      allow read: if isAuth();
+      // Pricing/app settings are non-sensitive and needed before auth initialises
+      allow read: if true;
     }
   }
 }

@@ -17,7 +17,7 @@ import {
   type DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "../config";
-import type { Order, OrderStatus } from "@goshats/types";
+import type { ConditionAtPickup, Order, OrderStatus } from "@goshats/types";
 
 const ordersRef = collection(db, "orders");
 
@@ -121,6 +121,32 @@ export async function updateOrderStatus(
       timestamp: new Date(),
       note: note ?? null,
     }),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function acceptOrder(
+  orderId: string,
+  riderId: string
+): Promise<void> {
+  await updateDoc(doc(db, "orders", orderId), {
+    riderId,
+    status: "accepted",
+    timeline: arrayUnion({
+      status: "accepted",
+      timestamp: new Date(),
+      note: null,
+    }),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function updateConditionAtPickup(
+  orderId: string,
+  condition: ConditionAtPickup
+): Promise<void> {
+  await updateDoc(doc(db, "orders", orderId), {
+    conditionAtPickup: condition,
     updatedAt: serverTimestamp(),
   });
 }

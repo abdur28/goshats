@@ -3,6 +3,7 @@ import {
   doc,
   getDocs,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   where,
@@ -14,15 +15,23 @@ import {
 import { db } from "../config";
 import type { AppNotification } from "@goshats/types";
 
-const notificationsRef = collection(db, "notifications");
+/**
+ * Get the notifications subcollection reference for a user or rider.
+ *
+ * @param collectionName - "users" or "riders"
+ * @param uid - The user/rider UID
+ */
+function notificationsRef(collectionName: "users" | "riders", uid: string) {
+  return collection(db, collectionName, uid, "notifications");
+}
 
 export function listenToNotifications(
-  userId: string,
+  collectionName: "users" | "riders",
+  uid: string,
   callback: (notifications: AppNotification[]) => void
 ): Unsubscribe {
   const q = query(
-    notificationsRef,
-    where("userId", "==", userId),
+    notificationsRef(collectionName, uid),
     orderBy("createdAt", "desc"),
     limit(50)
   );
@@ -36,12 +45,12 @@ export function listenToNotifications(
 }
 
 export async function getNotifications(
-  userId: string,
+  collectionName: "users" | "riders",
+  uid: string,
   limitCount: number = 50
 ): Promise<AppNotification[]> {
   const q = query(
-    notificationsRef,
-    where("userId", "==", userId),
+    notificationsRef(collectionName, uid),
     orderBy("createdAt", "desc"),
     limit(limitCount)
   );
@@ -52,17 +61,22 @@ export async function getNotifications(
 }
 
 export async function markNotificationRead(
+  collectionName: "users" | "riders",
+  uid: string,
   notificationId: string
 ): Promise<void> {
-  await updateDoc(doc(db, "notifications", notificationId), { isRead: true });
+  await updateDoc(
+    doc(db, collectionName, uid, "notifications", notificationId),
+    { isRead: true }
+  );
 }
 
 export async function markAllNotificationsRead(
-  userId: string
+  collectionName: "users" | "riders",
+  uid: string
 ): Promise<void> {
   const q = query(
-    notificationsRef,
-    where("userId", "==", userId),
+    notificationsRef(collectionName, uid),
     where("isRead", "==", false)
   );
 
@@ -74,4 +88,14 @@ export async function markAllNotificationsRead(
     batch.update(d.ref, { isRead: true });
   }
   await batch.commit();
+}
+
+export async function deleteNotification(
+  collectionName: "users" | "riders",
+  uid: string,
+  notificationId: string
+): Promise<void> {
+  await deleteDoc(
+    doc(db, collectionName, uid, "notifications", notificationId)
+  );
 }

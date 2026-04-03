@@ -21,7 +21,12 @@ const FILTERS = ["All", "food", "parcel", "document", "other"] as const;
 type Filter = (typeof FILTERS)[number];
 
 function formatOrderDate(ts: Timestamp | any): string {
-  const date = ts instanceof Timestamp ? ts.toDate() : ts?.seconds ? new Date(ts.seconds * 1000) : null;
+  const date =
+    ts instanceof Timestamp
+      ? ts.toDate()
+      : ts?.seconds
+        ? new Date(ts.seconds * 1000)
+        : null;
   if (!date) return "—";
 
   const now = new Date();
@@ -54,7 +59,12 @@ function formatOrderDate(ts: Timestamp | any): string {
 }
 
 function getSectionTitle(ts: Timestamp | any): string {
-  const date = ts instanceof Timestamp ? ts.toDate() : ts?.seconds ? new Date(ts.seconds * 1000) : null;
+  const date =
+    ts instanceof Timestamp
+      ? ts.toDate()
+      : ts?.seconds
+        ? new Date(ts.seconds * 1000)
+        : null;
   if (!date) return "Older";
 
   const now = new Date();
@@ -67,9 +77,17 @@ function getSectionTitle(ts: Timestamp | any): string {
   return "Older";
 }
 
-function groupIntoSections(orders: Order[]): { title: string; data: Order[] }[] {
+function groupIntoSections(
+  orders: Order[],
+): { title: string; data: Order[] }[] {
   const map = new Map<string, Order[]>();
-  const sectionOrder = ["Today", "Yesterday", "This Week", "This Month", "Older"];
+  const sectionOrder = [
+    "Today",
+    "Yesterday",
+    "This Week",
+    "This Month",
+    "Older",
+  ];
 
   for (const order of orders) {
     const title = getSectionTitle(order.createdAt);
@@ -114,10 +132,12 @@ export default function OrdersScreen() {
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [refresh]);
 
   const filtered =
-    activeFilter === "All" ? orders : orders.filter((o) => o.loadType === activeFilter);
+    activeFilter === "All"
+      ? orders
+      : orders.filter((o) => o.loadType === activeFilter);
 
   const sections = groupIntoSections(filtered);
 
@@ -191,7 +211,9 @@ export default function OrdersScreen() {
             tintColor={COLORS.primary}
           />
         }
-        onEndReached={() => { if (hasMore && !isLoading) loadMore(); }}
+        onEndReached={() => {
+          if (hasMore && !isLoading) loadMore();
+        }}
         onEndReachedThreshold={0.3}
         ListFooterComponent={
           isLoading && orders.length > 0 ? (
@@ -210,18 +232,53 @@ export default function OrdersScreen() {
               <OrderCardSkeleton />
             </View>
           ) : error ? (
-            <View style={{ alignItems: "center", justifyContent: "center", padding: 32, marginTop: 48 }}>
-              <Text style={{ fontFamily: "PolySans-Bulky", fontSize: 15, color: "#111827", marginBottom: 6 }}>
+            <View
+              style={{
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 32,
+                marginTop: 48,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: "PolySans-Bulky",
+                  fontSize: 15,
+                  color: "#111827",
+                  marginBottom: 6,
+                }}
+              >
                 Couldn&apos;t load orders
               </Text>
-              <Text style={{ fontFamily: "PolySans-Neutral", fontSize: 13, color: "#9CA3AF", marginBottom: 16, textAlign: "center" }}>
+              <Text
+                style={{
+                  fontFamily: "PolySans-Neutral",
+                  fontSize: 13,
+                  color: "#9CA3AF",
+                  marginBottom: 16,
+                  textAlign: "center",
+                }}
+              >
                 {error}
               </Text>
               <Pressable
                 onPress={refresh}
-                style={{ backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 9999 }}
+                style={{
+                  backgroundColor: COLORS.primary,
+                  paddingHorizontal: 24,
+                  paddingVertical: 10,
+                  borderRadius: 9999,
+                }}
               >
-                <Text style={{ fontFamily: "PolySans-Bulky", color: "#fff", fontSize: 13 }}>Try again</Text>
+                <Text
+                  style={{
+                    fontFamily: "PolySans-Bulky",
+                    color: "#fff",
+                    fontSize: 13,
+                  }}
+                >
+                  Try again
+                </Text>
               </Pressable>
             </View>
           ) : (

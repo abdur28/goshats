@@ -1,14 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
-import { getRiderOrders } from "@goshats/firebase";
-import type { Order } from "@goshats/types";
 import { useAuthStore } from "@/store/auth-store";
+import { getRiderOrders } from "@goshats/firebase/src/firestore/orders";
+import type { Order } from "@goshats/types";
+import { useCallback, useEffect, useState } from "react";
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { db } from "@goshats/firebase";
 
 type EarningsPeriod = "today" | "week" | "month" | "all";
 
+import { RiderPayout } from "@goshats/types";
+
 interface EarningsData {
+  fareKobo: number;
+  tipsKobo: number;
   totalKobo: number;
   tripCount: number;
   orders: Order[];
+  payouts: RiderPayout[];
 }
 
 function getStartDate(period: EarningsPeriod): Date | null {
@@ -35,9 +42,12 @@ export function useEarnings() {
   const user = useAuthStore((s) => s.user);
   const [period, setPeriod] = useState<EarningsPeriod>("today");
   const [earnings, setEarnings] = useState<EarningsData>({
+    fareKobo: 0,
+    tipsKobo: 0,
     totalKobo: 0,
     tripCount: 0,
     orders: [],
+    payouts: [],
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,7 +56,9 @@ export function useEarnings() {
 
     setIsLoading(true);
     try {
-      const { orders } = await getRiderOrders(user.uid, 100);
+      const result = await getRiderOrders(user.uid, 50);
+      const orders: Order[] = result.orders;
+
       const startDate = getStartDate(period);
 
       const filtered = orders.filter((order) => {
@@ -59,15 +71,36 @@ export function useEarnings() {
         return orderDate >= startDate;
       });
 
-      const totalKobo = filtered.reduce(
-        (sum, order) => sum + (order.totalAmountKobo ?? 0),
-        0
+      const fareKobo = filtered.reduce(
+        (sum, order) => sum + (order.fareAmountKobo ?? 0),
+        0,
+      );
+      const tipsKobo = filtered.reduce(
+        (sum, order) => sum + (order.tipAmountKobo ?? 0),
+        0,
       );
 
+      // Rider actual total earned is Fare + Tip
+      const payoutQuery = query(
+        collection(db, "rider_payouts"),
+        where("riderId", "==", user.uid),
+        orderBy("createdAt", "desc"),
+        limit(50)
+      );
+      
+      const payoutDocs = await getDocs(payoutQuery);
+      const payouts = payoutDocs.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as RiderPayout));
+
+      // Rider actual total earned in the selected period is Fare + Tip
+      const totalKobo = fareKobo + tipsKobo;
+
       setEarnings({
+        fareKobo,
+        tipsKobo,
         totalKobo,
         tripCount: filtered.length,
         orders: filtered,
+        payouts,
       });
     } catch {
       // Keep existing state on error

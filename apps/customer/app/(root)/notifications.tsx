@@ -1,14 +1,23 @@
 import { Header } from "@goshats/ui";
+import { useNotificationContext } from "@/context/NotificationContext";
 import { router } from "expo-router";
+import type { AppNotification } from "@goshats/types";
+import type { Timestamp } from "firebase/firestore";
 import {
   DirectboxDefault,
   DiscountShape,
   MessageProgramming,
   MessageText,
+  TickCircle,
   Trash,
   WalletAdd,
 } from "iconsax-react-native";
-import { FlatList, Pressable, Text, View } from "react-native";
+import {
+  FlatList,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,58 +28,6 @@ type NotificationType =
   | "promo"
   | "referral_reward"
   | "system";
-
-interface AppNotification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  body: string;
-  time: string;
-  isRead: boolean;
-}
-
-const MOCK_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: "1",
-    type: "order_update",
-    title: "Order Delivered!",
-    body: "Your parcel has been successfully delivered to 14 Maitama Crescent. Tap to see receipt.",
-    time: "2m ago",
-    isRead: false,
-  },
-  {
-    id: "2",
-    type: "promo",
-    title: "Weekend 20% Off 🚀",
-    body: "Use code WEEKEND20 to get 20% off your next two logistics requests. Expires Sunday midnight.",
-    time: "4h ago",
-    isRead: false,
-  },
-  {
-    id: "3",
-    type: "chat_message",
-    title: "New message from Ahmed",
-    body: "I am downstairs right now, please come out.",
-    time: "Yesterday",
-    isRead: true,
-  },
-  {
-    id: "4",
-    type: "referral_reward",
-    title: "₦1,000 Referral Bonus!",
-    body: "David just completed their first delivery. ₦1,000 has been credited to your wallet.",
-    time: "Yesterday",
-    isRead: true,
-  },
-  {
-    id: "5",
-    type: "system",
-    title: "Welcome to Go Shats",
-    body: "Thanks for joining. You can now book riders to move anything across the city instantly.",
-    time: "24 Mar",
-    isRead: true,
-  },
-];
 
 const getNotificationConfig = (type: NotificationType) => {
   switch (type) {
@@ -108,11 +65,64 @@ const getNotificationConfig = (type: NotificationType) => {
   }
 };
 
+/**
+ * Format a Firestore Timestamp or Date into a relative time string.
+ */
+function formatRelativeTime(timestamp: Timestamp | Date | undefined): string {
+  if (!timestamp) return "";
+
+  let date: Date;
+  if (timestamp && typeof (timestamp as Timestamp).toDate === "function") {
+    date = (timestamp as Timestamp).toDate();
+  } else if (timestamp instanceof Date) {
+    date = timestamp;
+  } else {
+    return "";
+  }
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 2) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString("en-NG", { day: "numeric", month: "short" });
+}
+
 export default function NotificationsScreen() {
-  const renderRightActions = () => {
+  const { notifications, unreadCount, markRead, markAllRead, removeNotification } =
+    useNotificationContext();
+
+  const handleNotificationPress = async (item: AppNotification) => {
+    // Mark as read
+    if (!item.isRead) {
+      await markRead(item.id);
+    }
+
+    // Deep link based on notification data
+    if (item.data?.orderId) {
+      router.push({
+        pathname: "/(root)/(tracking)/[id]",
+        params: { id: item.data.orderId },
+      });
+    } else if (item.data?.screen === "payments") {
+      router.push("/(root)/settings/payments");
+    }
+  };
+
+  const renderRightActions = (id: string) => {
     return (
       <View className="justify-center mb-4 ml-3">
-        <Pressable className="w-[60px] h-[60px] items-center justify-center active:opacity-50">
+        <Pressable
+          className="w-[60px] h-[60px] items-center justify-center active:opacity-50"
+          onPress={() => removeNotification(id)}
+        >
           <Trash size={28} color="#EF4444" variant="Bold" />
         </Pressable>
       </View>
@@ -124,12 +134,13 @@ export default function NotificationsScreen() {
 
     return (
       <Swipeable
-        renderRightActions={renderRightActions}
+        renderRightActions={() => renderRightActions(item.id)}
         overshootRight={false}
         containerStyle={{ marginBottom: 16 }}
       >
         <Pressable
           className={`bg-white rounded-[24px] p-5 border active:opacity-80 ${item.isRead ? "border-gray-100/60" : "border-[#006B3F]/30 bg-[#006B3F]/[0.01]"}`}
+          onPress={() => handleNotificationPress(item)}
         >
           <View className="flex-row">
             {/* Icon Box */}
@@ -167,7 +178,7 @@ export default function NotificationsScreen() {
               </Text>
               <View className="flex-row items-center justify-between">
                 <Text className="text-[12px] font-sans-medium text-gray-400">
-                  {item.time}
+                  {formatRelativeTime(item.createdAt)}
                 </Text>
               </View>
             </View>
@@ -180,10 +191,26 @@ export default function NotificationsScreen() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView className="flex-1 bg-[#F9FAFB]" edges={["top"]}>
-        <Header title="Notifications" onBack={() => router.back()} />
+        <Header
+          title="Notifications"
+          onBack={() => router.back()}
+          rightAction={
+            unreadCount > 0 ? (
+              <Pressable
+                onPress={markAllRead}
+                className="flex-row items-center active:opacity-50"
+              >
+                <TickCircle size={18} color="#006B3F" variant="Bold" />
+                <Text className="text-[13px] font-sans-medium text-[#006B3F] ml-1">
+                  Read all
+                </Text>
+              </Pressable>
+            ) : undefined
+          }
+        />
 
         <FlatList
-          data={MOCK_NOTIFICATIONS}
+          data={notifications}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}

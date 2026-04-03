@@ -10,12 +10,14 @@ import { generatePaystackReference } from "@/lib/paystack";
 import { useAuthStore } from "@/store/auth-store";
 import { useBookingStore } from "@/store/booking-store";
 import {
-  addPaymentMethod,
   createOrder,
+  cancelOrder,
   getPaymentMethods,
   getPromoCode,
   getPromoUsage,
+  functions,
 } from "@goshats/firebase";
+import { httpsCallable } from "firebase/functions";
 import type { PaymentMethod } from "@goshats/types";
 import { Header } from "@goshats/ui";
 import { router } from "expo-router";
@@ -43,12 +45,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-function mapToCardType(brand: string): "mastercard" | "visa" | "verve" {
-  const b = (brand ?? "").toLowerCase();
-  if (b.includes("visa")) return "visa";
-  if (b.includes("verve")) return "verve";
-  return "mastercard";
-}
 
 export default function SummaryScreen() {
   const booking = useBookingStore();
@@ -255,31 +251,87 @@ export default function SummaryScreen() {
       return;
     }
 
-    // Card — charge via authorization code
-    if (!selectedCard) return;
+    // Card — create the order first (pending), then charge with the real orderId.
+    // If charge fails we cancel the order so it never appears stuck.
+    if (!selectedCard || !user || !pickup || !dropoff || !selectedRiderId || !loadType) return;
     setIsSubmitting(true);
+
+    // Step 1: create order with pending payment status
+    let pendingOrderId: string;
     try {
-      const reference = generatePaystackReference();
-      const res = await fetch("/api/paystack-charge-authorization", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          authorizationCode: selectedCard.paystackAuthorizationCode,
-          email: user?.email ?? "",
-          amount: finalTotal,
-          reference,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.status) {
-        throw new Error(data.error || "Card charge failed. Please try again.");
-      }
-      await createOrderWithPayment({
+      pendingOrderId = await createOrder({
+        customerId: user.uid,
+        riderId: selectedRiderId,
+        loadType,
+        loadDescription: loadDescription || "",
+        isHighValue,
+        declaredValueKobo,
+        isMultiStop: extraStops.length > 0,
+        pickup,
+        dropoff,
+        isScheduled,
+        scheduledPickupAt: scheduledPickupAt
+          ? Timestamp.fromDate(scheduledPickupAt)
+          : null,
+        riderTier: selectedRiderTier,
+        tierMultiplier,
+        fareAmountKobo,
+        bookingFeeKobo,
+        promoDiscountKobo,
+        referralCreditsAppliedKobo: creditsApplied,
+        tipAmountKobo: 0,
+        totalAmountKobo: finalTotal,
+        promoCode: booking.promoCode,
         paymentMethod: "card",
-        paymentStatus: "paid",
-        paystackReference: data.data.reference,
+        paymentStatus: "pending",
+        paystackReference: null,
+        status: "pending",
+        conditionAtPickup: null,
+        timeline: [],
+        estimatedDistanceMeters,
+        estimatedDurationSeconds,
+        actualPickupAt: null,
+        actualDeliveryAt: null,
+        hasDispute: false,
+        customerRatingId: null,
+        riderRatingId: null,
       });
     } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to place order. Please try again.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Step 2: charge the saved card with the real orderId in metadata
+    try {
+      const reference = generatePaystackReference();
+      const chargeCardFn = httpsCallable(functions, "chargeCard");
+      const result = await chargeCardFn({
+        authorizationCode: selectedCard.paystackAuthorizationCode,
+        email: user.email ?? "",
+        amount: finalTotal,
+        reference,
+        metadata: {
+          userId: user.uid,
+          orderId: pendingOrderId,
+          saveCard: false,
+          promoCode: booking.promoCode || null,
+          referralCreditsAppliedKobo: creditsApplied || 0,
+        },
+      });
+      const data = result.data as any;
+      if (!data.status) {
+        throw new Error("Card charge failed. Please try again.");
+      }
+      // Charge succeeded — navigate to tracking. The webhook will confirm payment.
+      resetBooking();
+      router.replace({
+        pathname: "/(tracking)/[id]",
+        params: { id: pendingOrderId },
+      } as any);
+    } catch (err: any) {
+      // Charge failed — cancel the pending order so it doesn't appear stuck
+      await cancelOrder(pendingOrderId, "Payment failed").catch(() => {});
       Alert.alert(
         "Payment Failed",
         err.message || "Card could not be charged.",
@@ -297,48 +349,10 @@ export default function SummaryScreen() {
     setShowPaystackModal(false);
     if (!user) return;
 
-    // Save card to Firebase (only if user opted in)
-    const type = mapToCardType(cardDetails.brand ?? cardDetails.cardType ?? "");
-    if (saveCard) {
-      try {
-        const newMethodId = await addPaymentMethod(user.uid, {
-          type,
-          last4: cardDetails.last4 ?? "",
-          expiryMonth: cardDetails.expiryMonth ?? 0,
-          expiryYear: cardDetails.expiryYear ?? 0,
-          cardholderName: userProfile
-            ? `${userProfile.otherName} ${userProfile.surname}`.trim()
-            : "",
-          bank: cardDetails.bank ?? "",
-          paystackAuthorizationCode: cardDetails.authorizationCode,
-          paystackSignature: cardDetails.signature ?? "",
-          paystackBin: cardDetails.bin ?? "",
-          isPrimary: savedCards.length === 0,
-        });
-
-        const newCard: PaymentMethod = {
-          id: newMethodId,
-          type,
-          last4: cardDetails.last4 ?? "",
-          expiryMonth: cardDetails.expiryMonth ?? 0,
-          expiryYear: cardDetails.expiryYear ?? 0,
-          cardholderName: userProfile
-            ? `${userProfile.otherName} ${userProfile.surname}`.trim()
-            : "",
-          bank: cardDetails.bank ?? "",
-          paystackAuthorizationCode: cardDetails.authorizationCode,
-          paystackSignature: cardDetails.signature ?? "",
-          paystackBin: cardDetails.bin ?? "",
-          isPrimary: savedCards.length === 0,
-          createdAt: Timestamp.now(),
-        };
-
-        setSavedCards((prev) => [newCard, ...prev]);
-        setSelectedCard(newCard);
-      } catch {
-        // Card save failed silently — still create order
-      }
-    }
+    // Card saving is now handled server-side via Paystack webhook.
+    // The webhook receives the authorization data and saves to
+    // users/{uid}/paymentMethods/ if saveCard metadata flag is true.
+    // We just need to create the order here.
 
     await createOrderWithPayment({
       paymentMethod: "card",

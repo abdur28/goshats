@@ -7,23 +7,18 @@ import {
   orderBy,
   limit,
 } from "firebase/firestore";
-import { distanceBetween } from "geofire-common";
 import { db } from "@goshats/firebase";
 import type { Order } from "@goshats/types";
 import { useAuthStore } from "@/store/auth-store";
-import { useLocationStore } from "@/store/location-store";
 
-const NEARBY_RADIUS_KM = 15;
-
-export function useIncomingRequests() {
+export function useIncomingRequests(isOnline?: boolean) {
   const user = useAuthStore((s) => s.user);
   const riderProfile = useAuthStore((s) => s.riderProfile);
-  const currentLocation = useLocationStore((s) => s.currentLocation);
   const [requests, setRequests] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !riderProfile || riderProfile.status !== "approved") {
+    if (!isOnline || !user || !riderProfile || riderProfile.status !== "approved") {
       setRequests([]);
       setIsLoading(false);
       return;
@@ -31,37 +26,39 @@ export function useIncomingRequests() {
 
     const q = query(
       collection(db, "orders"),
+      where("riderId", "==", user.uid),
       where("status", "==", "pending"),
-      where("riderId", "==", null),
       orderBy("createdAt", "desc"),
       limit(20)
     );
 
     const unsubscribe = onSnapshot(q, (snap) => {
-      const orders = snap.docs.map(
-        (d) => ({ id: d.id, ...d.data() }) as Order
-      );
+      const now = Date.now();
+      const thirtyMins = 30 * 60 * 1000;
 
-      // Client-side distance filter if we have location
-      if (currentLocation) {
-        const filtered = orders.filter((order) => {
-          if (!order.pickup?.location) return true;
-          const dist = distanceBetween(
-            [currentLocation.latitude, currentLocation.longitude],
-            [order.pickup.location.latitude, order.pickup.location.longitude]
-          );
-          return dist <= NEARBY_RADIUS_KM;
+      const orders = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as Order)
+        .filter((o) => {
+          // Hide pending orders older than 30 mins
+          let time = 0;
+          if (o.createdAt && (o.createdAt as any).toMillis) {
+            time = (o.createdAt as any).toMillis();
+          } else if (o.createdAt instanceof Date) {
+            time = o.createdAt.getTime();
+          }
+          return time === 0 || now - time < thirtyMins;
         });
-        setRequests(filtered);
-      } else {
-        setRequests(orders);
-      }
 
+      setRequests(orders);
       setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user, riderProfile, currentLocation]);
+  }, [user, riderProfile, isOnline]);
 
-  return { requests, isLoading };
+  const dismissRequest = (id: string) => {
+    setRequests((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  return { requests, isLoading, dismissRequest };
 }

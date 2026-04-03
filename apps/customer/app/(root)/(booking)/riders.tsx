@@ -1,6 +1,6 @@
 import { COLORS } from "@/constants/theme";
 import { useNearbyRiders } from "@/hooks/use-nearby-riders";
-import { Skeleton } from "@goshats/ui";
+import { Skeleton , Avatar, Header, StarRating, TierBadge } from "@goshats/ui";
 import { formatDistance, formatDuration, formatNaira } from "@/lib/format";
 import { haversineDistance } from "@/lib/geo";
 import { calculateRouteDistance } from "@/lib/maps";
@@ -10,7 +10,6 @@ import { useLocationStore } from "@/store/location-store";
 import { usePricingStore } from "@/store/pricing-store";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { Rider } from "@goshats/types";
-import { Avatar, Header, StarRating, TierBadge } from "@goshats/ui";
 import { router } from "expo-router";
 import { Car } from "iconsax-react-native";
 import React, { useEffect, useMemo, useState } from "react";

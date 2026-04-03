@@ -46,6 +46,6 @@ export function handleNotificationResponse(
   const data = response.notification.request.content.data;
 
   if (data?.orderId) {
-    router.push(`/(delivery)/${data.orderId}`);
+    router.push({ pathname: "/(root)/orders/[id]", params: { id: data.orderId } } as any);
   }
 }

@@ -40,6 +40,44 @@ export async function uploadProfilePhoto(
   });
 }
 
+export async function uploadRiderDocument(
+  uid: string,
+  docType: string,
+  uri: string,
+  onProgress?: (progress: number) => void
+): Promise<{ downloadUrl: string; storagePath: string }> {
+  const blob = await uriToBlob(uri);
+  // Extract extension from MIME type (e.g., image/png -> png, application/pdf -> pdf)
+  const extension = blob.type.split("/")[1] || "bin";
+  const storagePath = `rider-documents/${uid}/${docType}-${Date.now()}.${extension}`;
+  const storageRef = ref(storage, storagePath);
+
+  const metadata = {
+    contentType: blob.type,
+  };
+
+  return new Promise((resolve, reject) => {
+    const task: UploadTask = uploadBytesResumable(storageRef, blob, metadata);
+
+    task.on(
+      "state_changed",
+      (snapshot) => {
+        const progress =
+          (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        onProgress?.(progress);
+      },
+      (error) => {
+        console.error("Firebase Storage Upload Error:", error);
+        reject(error);
+      },
+      async () => {
+        const downloadUrl = await getDownloadURL(task.snapshot.ref);
+        resolve({ downloadUrl, storagePath });
+      }
+    );
+  });
+}
+
 export async function uploadDisputePhoto(
   orderId: string,
   uri: string,

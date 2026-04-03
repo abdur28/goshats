@@ -7,21 +7,20 @@ interface AvatarProps {
   uri?: string | null;
   name?: string;
   size?: AvatarSize;
-  className?: string;
 }
 
-const sizeClasses: Record<AvatarSize, string> = {
-  sm: "w-8 h-8",
-  md: "w-12 h-12",
-  lg: "w-16 h-16",
-  xl: "w-24 h-24",
+const sizePx: Record<AvatarSize, number> = {
+  sm: 32,
+  md: 48,
+  lg: 64,
+  xl: 96,
 };
 
-const textSizeClasses: Record<AvatarSize, string> = {
-  sm: "text-xs",
-  md: "text-sm",
-  lg: "text-lg",
-  xl: "text-2xl",
+const textSizePx: Record<AvatarSize, number> = {
+  sm: 12,
+  md: 14,
+  lg: 18,
+  xl: 24,
 };
 
 function getInitials(name?: string): string {
@@ -33,21 +32,36 @@ function getInitials(name?: string): string {
   return parts[0][0].toUpperCase();
 }
 
-export function Avatar({ uri, name, size = "md", className = "" }: AvatarProps) {
+export function Avatar({ uri, name, size = "md" }: AvatarProps) {
+  const px = sizePx[size];
+
   if (uri) {
     return (
       <Image
         source={{ uri }}
-        className={`${sizeClasses[size]} rounded-full ${className}`}
+        style={{ width: px, height: px, borderRadius: px / 2 }}
       />
     );
   }
 
   return (
     <View
-      className={`${sizeClasses[size]} rounded-full bg-primary-100 items-center justify-center ${className}`}
+      style={{
+        width: px,
+        height: px,
+        borderRadius: px / 2,
+        backgroundColor: "#D1FAE5",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
-      <Text className={`font-sans-semibold ${textSizeClasses[size]} text-primary`}>
+      <Text
+        style={{
+          fontFamily: "PolySans-Median",
+          fontSize: textSizePx[size],
+          color: "#006B3F",
+        }}
+      >
         {getInitials(name)}
       </Text>
     </View>

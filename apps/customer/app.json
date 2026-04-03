@@ -10,6 +10,8 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.goshats.customer",
+      "usesAppleSignIn": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "config": {},
       "icon": {
         "dark": "./assets/icons/Dark.png",
@@ -61,6 +63,12 @@
         {
           "icon": "./assets/icons/icon.png",
           "color": "#006B3F"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GO SHATS to access your photo library to update your profile picture."
         }
       ],
       "react-native-maps",

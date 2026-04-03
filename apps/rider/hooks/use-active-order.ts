@@ -40,7 +40,7 @@ export function useActiveOrder() {
       limit(1)
     );
 
-    const unsubscribe = onSnapshot(q, async (snap) => {
+    const unsubscribe = onSnapshot(q, (snap) => {
       if (snap.empty) {
         setOrder(null);
         setStops([]);
@@ -53,19 +53,22 @@ export function useActiveOrder() {
       const activeOrder = { id: doc.id, ...doc.data() } as Order;
       setOrder(activeOrder);
       setActiveOrder(activeOrder);
-
-      try {
-        const orderStops = await getStops(activeOrder.id);
-        setStops(orderStops);
-      } catch {
-        setStops([]);
-      }
-
       setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, [user]);
+
+  // Fetch stops separately whenever the active order changes
+  useEffect(() => {
+    if (!order?.id) {
+      setStops([]);
+      return;
+    }
+    getStops(order.id)
+      .then(setStops)
+      .catch(() => setStops([]));
+  }, [order?.id]);
 
   return { order, stops, isLoading };
 }

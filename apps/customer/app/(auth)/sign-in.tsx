@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { signInWithEmail } from "@goshats/firebase";
+import { useAuthStore } from "@/store/auth-store";
 import { loginSchema, type LoginInput } from "@goshats/types";
 import { Button, Input } from "@goshats/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +8,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Dimensions,
@@ -42,6 +43,10 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [firebaseError, setFirebaseError] = useState("");
+  const storeError = useAuthStore((s) => s.error);
+  const setStoreError = useAuthStore((s) => s.setError);
+
+  useEffect(() => () => setStoreError(null), []);
 
   const {
     control,
@@ -169,6 +174,15 @@ export default function SignInScreen() {
               Forgot password?
             </Text>
           </Pressable>
+
+          {storeError === "wrong_role" ? (
+            <View className="bg-amber-50 border border-amber-100 rounded-2xl px-5 py-3.5 mb-4 flex-row items-center gap-2">
+              <Ionicons name="information-circle-outline" size={16} color="#D97706" />
+              <Text className="text-sm font-sans text-amber-700 flex-1">
+                This account is registered as a rider. Please use the GoShats Rider app.
+              </Text>
+            </View>
+          ) : null}
 
           {firebaseError ? (
             <View className="bg-red-50 border border-red-100 rounded-full px-5 py-3.5 mb-4 flex-row items-center gap-2">

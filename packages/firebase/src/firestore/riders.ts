@@ -31,11 +31,15 @@ export async function createRider(
   uid: string,
   data: Omit<Rider, "uid" | "createdAt" | "updatedAt">
 ): Promise<void> {
-  await setDoc(doc(db, "riders", uid), {
-    ...data,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  await setDoc(
+    doc(db, "riders", uid),
+    {
+      ...data,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
 
 export async function updateRider(

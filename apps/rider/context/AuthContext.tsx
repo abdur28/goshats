@@ -12,8 +12,6 @@ import {
   onAuthStateChange,
   signInWithEmail,
   registerWithEmail,
-  signInWithGoogle as firebaseSignInWithGoogle,
-  signInWithApple as firebaseSignInWithApple,
   signOutUser,
   sendPasswordReset,
   updateUserPassword,
@@ -22,8 +20,6 @@ import {
 } from "@goshats/firebase";
 import type { Rider } from "@goshats/types";
 import { useAuthStore } from "@/store/auth-store";
-import { getGoogleIdToken, configureGoogleSignIn, signOutGoogle } from "@/lib/google-auth";
-import { getAppleCredential } from "@/lib/apple-auth";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -36,8 +32,6 @@ interface AuthContextType {
   error: string | null;
 
   signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signInWithApple: () => Promise<void>;
   register: (
     email: string,
     password: string,
@@ -54,10 +48,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const store = useAuthStore();
-
-  useEffect(() => {
-    configureGoogleSignIn();
-  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
@@ -98,99 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const handleSignInWithGoogle = useCallback(async () => {
-    store.setLoading(true);
-    store.setError(null);
-    try {
-      const idToken = await getGoogleIdToken();
-      if (!idToken) {
-        store.setLoading(false);
-        return;
-      }
-      const firebaseUser = await firebaseSignInWithGoogle(idToken);
-      const existingProfile = await getRider(firebaseUser.uid);
-      if (!existingProfile) {
-        await createRider(firebaseUser.uid, {
-          surname: firebaseUser.displayName?.split(" ").pop() ?? "",
-          otherName: firebaseUser.displayName?.split(" ")[0] ?? "",
-          email: firebaseUser.email ?? "",
-          phone: firebaseUser.phoneNumber ?? "",
-          profilePhotoUrl: firebaseUser.photoURL,
-          vehicleType: "motorcycle",
-          vehiclePlate: "",
-          vehicleModel: "",
-          vehicleColor: "",
-          vehicleYear: new Date().getFullYear(),
-          currentLocation: null,
-          geohash: null,
-          isOnline: false,
-          isAvailable: false,
-          status: "pending",
-          tier: "standard",
-          totalTrips: 0,
-          totalEarningsKobo: 0,
-          pendingEarningsKobo: 0,
-          averageRating: 0,
-          totalRatings: 0,
-          fcmTokens: [],
-        });
-      }
-    } catch (err: any) {
-      store.setError(err.message || "Failed to sign in with Google");
-      throw err;
-    } finally {
-      store.setLoading(false);
-    }
-  }, []);
-
-  const handleSignInWithApple = useCallback(async () => {
-    store.setLoading(true);
-    store.setError(null);
-    try {
-      const credential = await getAppleCredential();
-      if (!credential) {
-        store.setLoading(false);
-        return;
-      }
-      const firebaseUser = await firebaseSignInWithApple(
-        credential.identityToken,
-        credential.nonce
-      );
-      const existingProfile = await getRider(firebaseUser.uid);
-      if (!existingProfile) {
-        await createRider(firebaseUser.uid, {
-          surname: "",
-          otherName: "",
-          email: firebaseUser.email ?? "",
-          phone: "",
-          profilePhotoUrl: null,
-          vehicleType: "motorcycle",
-          vehiclePlate: "",
-          vehicleModel: "",
-          vehicleColor: "",
-          vehicleYear: new Date().getFullYear(),
-          currentLocation: null,
-          geohash: null,
-          isOnline: false,
-          isAvailable: false,
-          status: "pending",
-          tier: "standard",
-          totalTrips: 0,
-          totalEarningsKobo: 0,
-          pendingEarningsKobo: 0,
-          averageRating: 0,
-          totalRatings: 0,
-          fcmTokens: [],
-        });
-      }
-    } catch (err: any) {
-      store.setError(err.message || "Failed to sign in with Apple");
-      throw err;
-    } finally {
-      store.setLoading(false);
-    }
-  }, []);
-
   const register = useCallback(
     async (
       email: string,
@@ -215,10 +112,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     store.setLoading(true);
     try {
-      await signOutGoogle();
       await signOutUser();
       store.clearAuth();
-      router.replace("/(auth)/sign-in");
+      router.replace("/(auth)/welcome");
     } catch (err: any) {
       store.setError(err.message || "Failed to sign out");
     } finally {
@@ -277,8 +173,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authInitialized: store.authInitialized,
         error: store.error,
         signIn,
-        signInWithGoogle: handleSignInWithGoogle,
-        signInWithApple: handleSignInWithApple,
         register,
         signOut,
         resetPassword,

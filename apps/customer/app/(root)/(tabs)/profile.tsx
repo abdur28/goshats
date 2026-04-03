@@ -39,7 +39,7 @@ export default function ProfileScreen() {
           try {
             await signOutUser();
             clearAuth();
-            router.replace("/(auth)/sign-in");
+            router.replace("/(auth)/welcome");
           } finally {
             setSigningOut(false);
           }
