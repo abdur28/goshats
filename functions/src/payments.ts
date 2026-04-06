@@ -612,14 +612,16 @@ export const payoutOnDelivery = onDocumentUpdated(
     const after = event.data?.after?.data();
 
     if (!before || !after) return;
-    if (before.status === "delivered" || after.status !== "delivered") return;
 
     const orderId = event.params.orderId;
     const riderId = after.riderId as string | undefined;
-
-    // Only pay out if the customer paid online (card or wallet). 
-    // If cash on delivery, the rider already collected the money.
     const paymentMethod = after.paymentMethod as string;
+
+    // Tips disabled for MVP — only trigger on new delivery
+    if (before.status === "delivered" || after.status !== "delivered") return;
+
+    // Only pay out if the customer paid online (card or wallet).
+    // If cash on delivery, the rider already collected the money.
     if (paymentMethod === "cash") {
       logger.info(`Order ${orderId} was paid in cash. No Paystack payout needed.`);
       return;
@@ -631,8 +633,8 @@ export const payoutOnDelivery = onDocumentUpdated(
     }
 
     const fareKobo = (after.fareAmountKobo as number) || 0;
-    const tipKobo = (after.tipAmountKobo as number) || 0;
-    const amountKobo = fareKobo + tipKobo;
+    // const tipKobo = (after.tipAmountKobo as number) || 0; // Tips disabled for MVP
+    const amountKobo = fareKobo;
 
     if (amountKobo <= 0) return;
 
@@ -666,7 +668,21 @@ export const payoutOnDelivery = onDocumentUpdated(
       }
 
       if (detailsSnap.empty) {
-        logger.error(`No payout details found for rider ${riderId}`);
+        // No payout details — credit wallet so rider can withdraw manually later
+        logger.warn(`No payout details for rider ${riderId} — crediting wallet for manual withdrawal`);
+        await firestore.collection("riders").doc(riderId).update({
+          totalEarningsKobo: admin.firestore.FieldValue.increment(amountKobo),
+          withdrawableBalanceKobo: admin.firestore.FieldValue.increment(amountKobo),
+        });
+        await firestore.collection("rider_payouts").doc().set({
+          riderId,
+          orderId,
+          amountKobo,
+          status: "pending_withdrawal",
+          reason: "no_payout_details",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
         return;
       }
 

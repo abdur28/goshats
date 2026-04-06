@@ -27,7 +27,7 @@ export default function ReviewScreen() {
   const handleSubmit = async (
     stars: number,
     review: string,
-    tipAmountKobo: number,
+    _tipAmountKobo: number,
   ) => {
     if (!order || !user) return;
     const ratingId = await createRating({
@@ -37,10 +37,10 @@ export default function ReviewScreen() {
       ratedId: order.riderId ?? "",
       stars,
       review: review || null,
-      tipAmountKobo,
+      tipAmountKobo: 0, // Tips disabled for MVP
     });
     await setOrderCustomerRating(order.id, ratingId);
-    if (tipAmountKobo > 0) await addTip(order.id, tipAmountKobo);
+    // if (tipAmountKobo > 0) await addTip(order.id, tipAmountKobo); // Tips disabled for MVP
     clearActiveOrder();
     router.replace("/(tabs)" as any);
   };

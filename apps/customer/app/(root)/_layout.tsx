@@ -1,3 +1,4 @@
+import { NotificationProvider } from "@/context/NotificationContext";
 import { useActiveOrder } from "@/hooks/use-active-order";
 import { useAuthStore } from "@/store/auth-store";
 import { Redirect, Stack } from "expo-router";
@@ -17,7 +18,7 @@ export default function RootGroupLayout() {
   }
 
   return (
-    <>
+    <NotificationProvider>
       <ActiveOrderListener />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
@@ -38,6 +39,6 @@ export default function RootGroupLayout() {
           options={{ animation: "slide_from_bottom" }}
         />
       </Stack>
-    </>
+    </NotificationProvider>
   );
 }

@@ -43,6 +43,7 @@ service cloud.firestore {
       allow read: if isAuth();
       allow create: if isOwner(uid);
       allow update: if isOwner(uid);
+      allow delete: if isOwner(uid);
 
       // Addresses subcollection
       match /addresses/{addressId} {
@@ -67,6 +68,7 @@ service cloud.firestore {
       // Riders can create and update their own profile
       allow create: if isOwner(uid);
       allow update: if isOwner(uid);
+      allow delete: if isOwner(uid);
 
       // Payout bank accounts — rider owns these entirely
       match /payoutDetails/{detailId} {

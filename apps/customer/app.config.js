@@ -4,12 +4,15 @@
 // Local: set in .env.local  |  EAS builds: set as EAS Secrets in the dashboard.
 const iosKey = process.env.GOOGLE_MAPS_API_KEY_IOS ?? "";
 const androidKey = process.env.GOOGLE_MAPS_API_KEY_ANDROID ?? "";
+const iosPlist =
+  process.env.GOOGLE_SERVICE_INFO_PLIST ?? "./GoogleService-Info.plist";
 
 export default ({ config }) => {
   return {
     ...config,
     ios: {
       ...config.ios,
+      googleServicesFile: iosPlist,
       config: {
         ...config.ios?.config,
         googleMapsApiKey: iosKey,
@@ -29,7 +32,10 @@ export default ({ config }) => {
     // Pass keys explicitly to react-native-maps plugin so it doesn't
     // have to fall back to the ios/android config objects
     plugins: (config.plugins ?? []).map((plugin) => {
-      if (plugin === "react-native-maps" || (Array.isArray(plugin) && plugin[0] === "react-native-maps")) {
+      if (
+        plugin === "react-native-maps" ||
+        (Array.isArray(plugin) && plugin[0] === "react-native-maps")
+      ) {
         return [
           "react-native-maps",
           { androidGoogleMapsApiKey: androidKey, iosGoogleMapsApiKey: iosKey },

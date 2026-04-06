@@ -167,10 +167,16 @@ export const onRatingSubmitted = onDocumentCreated(
     if (!rating) return;
 
     const ratingId = event.params.ratingId;
-    const rateeId = rating.rateeId as string;
-    const rateeType = rating.rateeType as "rider" | "customer";
+    const rateeId = (rating.ratedId ?? rating.rateeId) as string;
+    const raterRole = rating.raterRole as "customer" | "rider";
+    const rateeType = raterRole === "customer" ? "rider" : "customer";
     const stars = rating.stars as number;
     const orderId = rating.orderId as string;
+
+    if (!rateeId || !rateeId.trim()) {
+      logger.error(`Rating ${ratingId} has empty ratedId — skipping`);
+      return;
+    }
 
     const collectionName = rateeType === "rider" ? "riders" : "users";
 

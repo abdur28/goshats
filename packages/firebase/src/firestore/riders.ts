@@ -3,22 +3,30 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   query,
   collection,
   where,
   getDocs,
   orderBy,
+  writeBatch,
   serverTimestamp,
   GeoPoint,
   type Unsubscribe,
 } from "firebase/firestore";
+import { ref, listAll, deleteObject } from "firebase/storage";
+import {
+  deleteUser as deleteFirebaseAuthUser,
+  reauthenticateWithCredential,
+  type AuthCredential,
+} from "firebase/auth";
 import {
   geohashForLocation,
   geohashQueryBounds,
   distanceBetween,
 } from "geofire-common";
-import { db } from "../config";
+import { db, storage, auth } from "../config";
 import type { Rider } from "@goshats/types";
 
 export async function getRider(uid: string): Promise<Rider | null> {
@@ -115,6 +123,50 @@ export async function updateAvailability(
     isAvailable,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function deleteRider(uid: string): Promise<void> {
+  // Delete data FIRST (while still authenticated), auth account LAST
+  const subcollections = ["documents", "payoutDetails", "notifications"];
+  for (const sub of subcollections) {
+    const snap = await getDocs(collection(db, "riders", uid, sub));
+    if (!snap.empty) {
+      const batch = writeBatch(db);
+      snap.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    }
+  }
+
+  for (const folder of [`profile-photos/${uid}`, `rider-documents/${uid}`]) {
+    try {
+      const folderRef = ref(storage, folder);
+      const list = await listAll(folderRef);
+      await Promise.all(list.items.map((item) => deleteObject(item)));
+    } catch {
+      // Folder doesn't exist or already deleted
+    }
+  }
+
+  await deleteDoc(doc(db, "riders", uid));
+
+  // Best-effort delete Firebase Auth account
+  try {
+    if (auth.currentUser?.uid === uid) {
+      await deleteFirebaseAuthUser(auth.currentUser);
+    }
+  } catch {
+    // Auth account deletion failed — data is already deleted
+  }
+}
+
+export async function reauthenticateAndDeleteRider(
+  uid: string,
+  credential: AuthCredential,
+): Promise<void> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) throw new Error("No authenticated user");
+  await reauthenticateWithCredential(currentUser, credential);
+  await deleteRider(uid);
 }
 
 export function listenToRider(

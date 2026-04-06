@@ -132,7 +132,7 @@ export default function OrdersScreen() {
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+  }, []);
 
   const filtered =
     activeFilter === "All"

@@ -2,7 +2,7 @@
   "expo": {
     "name": "GO SHATS Rider",
     "slug": "goshats-rider",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icons/icon.png",
     "scheme": "goshats-rider",
@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.goshats.rider",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "config": {},
       "icon": {
         "dark": "./assets/icons/Dark.png",
@@ -24,7 +25,7 @@
       "package": "com.goshats.rider",
       "config": {},
       "adaptiveIcon": {
-        "backgroundColor": "#006B3F",
+        "backgroundColor": "#264834",
         "foregroundImage": "./assets/icons/adaptive-icon.png",
         "monochromeImage": "./assets/icons/adaptive-icon.png"
       }
@@ -32,13 +33,13 @@
     "web": {
       "output": "static",
       "bundler": "metro",
-      "favicon": "./assets/icons/favicon.ico"
+      "favicon": "./assets/icons/icon.png"
     },
     "plugins": [
       [
         "expo-router",
         {
-          "origin": "https://goshats.expo.app/"
+          "origin": "https://goshats-rider.expo.app/"
         }
       ],
       [
@@ -47,7 +48,7 @@
           "image": "./assets/icons/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#006B3F"
+          "backgroundColor": "#264834"
         }
       ],
       [
@@ -64,7 +65,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icons/icon.png",
-          "color": "#006B3F"
+          "color": "#264834"
         }
       ],
       [
@@ -73,10 +74,7 @@
           "photosPermission": "Allow GO SHATS Rider to access your photo library to update your profile picture."
         }
       ],
-      [
-        "expo-document-picker",
-        {}
-      ],
+      ["expo-document-picker", {}],
       "react-native-maps",
       "expo-apple-authentication",
       "@react-native-google-signin/google-signin",

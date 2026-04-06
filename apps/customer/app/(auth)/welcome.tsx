@@ -1,8 +1,20 @@
+import { getAppleCredential } from "@/lib/apple-auth";
+import { configureGoogleSignIn, getGoogleIdToken } from "@/lib/google-auth";
+import { useAuthStore } from "@/store/auth-store";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  createUser,
+  getRider,
+  getUser,
+  signInWithApple,
+  signInWithGoogle,
+  signOutUser,
+} from "@goshats/firebase";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import type { User as FirebaseUser } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,18 +32,6 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAuthStore } from "@/store/auth-store";
-import { getAppleCredential } from "@/lib/apple-auth";
-import { configureGoogleSignIn, getGoogleIdToken } from "@/lib/google-auth";
-import {
-  signInWithGoogle,
-  signInWithApple,
-  getUser,
-  getRider,
-  createUser,
-  signOutUser,
-} from "@goshats/firebase";
-import type { User as FirebaseUser } from "firebase/auth";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -50,7 +50,7 @@ function generateReferralCode(name: string): string {
     .padEnd(4, "X");
   const suffix = Array.from(
     { length: 4 },
-    () => chars[Math.floor(Math.random() * chars.length)]
+    () => chars[Math.floor(Math.random() * chars.length)],
   ).join("");
   return prefix + suffix;
 }
@@ -62,7 +62,7 @@ function generateReferralCode(name: string): string {
  */
 async function ensureUserProfile(
   firebaseUser: FirebaseUser,
-  extraData?: { surname?: string; otherName?: string }
+  extraData?: { surname?: string; otherName?: string },
 ): Promise<void> {
   const existing = await getUser(firebaseUser.uid);
   if (existing) return;
@@ -151,9 +151,15 @@ export default function WelcomeScreen() {
 
       const firebaseUser = await signInWithApple(
         credential.identityToken,
-        credential.nonce
+        credential.nonce,
       );
-      await ensureUserProfile(firebaseUser);
+      await ensureUserProfile(firebaseUser, {
+        surname: credential.fullName.familyName ?? undefined,
+        otherName: credential.fullName.givenName ?? undefined,
+      });
+      const profile = await getUser(firebaseUser.uid);
+      useAuthStore.getState().setUser(firebaseUser);
+      useAuthStore.getState().setUserProfile(profile);
       router.replace("/(root)/" as any);
     } catch (error: any) {
       if (error?.message === "wrong_role") {
@@ -161,7 +167,7 @@ export default function WelcomeScreen() {
       } else {
         console.error("Apple sign-in error:", error);
         setSocialError(
-          "Something went wrong with Apple sign-in. Please try again."
+          "Something went wrong with Apple sign-in. Please try again.",
         );
       }
     } finally {
@@ -185,6 +191,9 @@ export default function WelcomeScreen() {
 
       const firebaseUser = await signInWithGoogle(idToken);
       await ensureUserProfile(firebaseUser);
+      const profile = await getUser(firebaseUser.uid);
+      useAuthStore.getState().setUser(firebaseUser);
+      useAuthStore.getState().setUserProfile(profile);
       router.replace("/(root)/" as any);
     } catch (error: any) {
       if (error?.message === "wrong_role") {
@@ -192,7 +201,7 @@ export default function WelcomeScreen() {
       } else {
         console.error("Google sign-in error:", error);
         setSocialError(
-          "Something went wrong with Google sign-in. Please try again."
+          "Something went wrong with Google sign-in. Please try again.",
         );
       }
     } finally {
@@ -265,11 +274,7 @@ export default function WelcomeScreen() {
           {/* General social error */}
           {socialError ? (
             <View className="bg-red-50 border border-red-100 rounded-full px-5 py-3.5 flex-row items-center gap-2">
-              <Ionicons
-                name="alert-circle-outline"
-                size={16}
-                color="#EF4444"
-              />
+              <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />
               <Text className="text-sm font-sans text-danger flex-1">
                 {socialError}
               </Text>

@@ -111,28 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         store.setLoading(false);
         return;
       }
-      const firebaseUser = await firebaseSignInWithGoogle(idToken);
-      const existingProfile = await getUser(firebaseUser.uid);
-      if (!existingProfile) {
-        await createUser(firebaseUser.uid, {
-          surname: firebaseUser.displayName?.split(" ").pop() ?? "",
-          otherName: firebaseUser.displayName?.split(" ")[0] ?? "",
-          email: firebaseUser.email ?? "",
-          phone: firebaseUser.phoneNumber ?? "",
-          countryCode: "NG",
-          profilePhotoUrl: firebaseUser.photoURL,
-          referralCode: firebaseUser.uid.substring(0, 8).toUpperCase(),
-          referralCredits: 0,
-          isPhoneVerified: false,
-          isEmailVerified: true,
-          status: "active",
-          fcmTokens: [],
-          notifyPush: true,
-          notifyEmail: true,
-          notifySms: false,
-          notifyNewsletter: false,
-        });
-      }
+      await firebaseSignInWithGoogle(idToken);
     } catch (err: any) {
       store.setError(err.message || "Failed to sign in with Google");
       throw err;
@@ -150,31 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         store.setLoading(false);
         return;
       }
-      const firebaseUser = await firebaseSignInWithApple(
-        credential.identityToken,
-        credential.nonce,
-      );
-      const existingProfile = await getUser(firebaseUser.uid);
-      if (!existingProfile) {
-        await createUser(firebaseUser.uid, {
-          surname: "",
-          otherName: "",
-          email: firebaseUser.email ?? "",
-          phone: "",
-          countryCode: "NG",
-          profilePhotoUrl: null,
-          referralCode: firebaseUser.uid.substring(0, 8).toUpperCase(),
-          referralCredits: 0,
-          isPhoneVerified: false,
-          isEmailVerified: true,
-          status: "active",
-          fcmTokens: [],
-          notifyPush: true,
-          notifyEmail: true,
-          notifySms: false,
-          notifyNewsletter: false,
-        });
-      }
+      await firebaseSignInWithApple(credential.identityToken, credential.nonce);
     } catch (err: any) {
       store.setError(err.message || "Failed to sign in with Apple");
       throw err;

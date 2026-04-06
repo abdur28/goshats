@@ -1,6 +1,9 @@
 import { useAuthStore } from "@/store/auth-store";
-import { uploadProfilePhoto } from "@goshats/firebase";
-import { updateRider } from "@goshats/firebase/src/firestore/riders";
+import { uploadProfilePhoto, signOutUser } from "@goshats/firebase";
+import {
+  updateRider,
+  deleteRider,
+} from "@goshats/firebase/src/firestore/riders";
 import { Avatar, Header } from "@goshats/ui";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
@@ -157,7 +160,25 @@ export default function PersonalInfoScreen() {
       "This action is permanent and cannot be undone. Are you sure?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => {} },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (!user) return;
+            try {
+              await deleteRider(user.uid);
+            } catch (err: any) {
+              console.error("Delete account error:", err);
+              Alert.alert("Error", "Failed to delete account. Please try again.");
+              return;
+            }
+            try {
+              await signOutUser();
+            } catch {}
+            useAuthStore.getState().clearAuth();
+            router.replace("/(auth)/welcome");
+          },
+        },
       ],
     );
 

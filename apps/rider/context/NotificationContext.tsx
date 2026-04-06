@@ -43,9 +43,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated || !user) return;
 
     (async () => {
-      const token = await requestNotificationPermission();
-      if (token) {
-        await saveFcmToken(user.uid, token, "riders");
+      try {
+        const token = await requestNotificationPermission();
+        if (token) {
+          await saveFcmToken(user.uid, token, "riders");
+        }
+      } catch {
+        // Push notifications unavailable (e.g. Expo Go on iOS)
       }
     })();
 

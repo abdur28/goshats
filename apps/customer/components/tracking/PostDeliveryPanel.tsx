@@ -32,7 +32,7 @@ export default function PostDeliveryPanel({
   const [customTipInput, setCustomTipInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  const showTip = paymentMethod === "card";
+  const showTip = false; // Tips disabled for MVP — was: paymentMethod === "card"
   const displayStars = hoveredStar || stars;
 
   // Resolve effective tip: custom input takes priority over chip selection

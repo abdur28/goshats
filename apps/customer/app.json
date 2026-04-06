@@ -2,7 +2,7 @@
   "expo": {
     "name": "GO SHATS",
     "slug": "goshats",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icons/icon.png",
     "scheme": "goshats",
@@ -34,7 +34,7 @@
     "web": {
       "output": "server",
       "bundler": "metro",
-      "favicon": "./assets/icons/favicon.ico"
+      "favicon": "./assets/icons/icon.png"
     },
     "plugins": [
       [
