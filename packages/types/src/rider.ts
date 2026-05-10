@@ -36,6 +36,11 @@ export interface Rider {
   isOnline: boolean;
   isAvailable: boolean; // false when actively on a delivery
 
+  // Single-device session enforcement: id of the device currently holding the
+  // active session. If a rider signs in on a second device, the older session
+  // detects the mismatch via its rider-doc listener and signs itself out.
+  activeDeviceId?: string | null;
+
   // Account status
   status: RiderStatus;
 

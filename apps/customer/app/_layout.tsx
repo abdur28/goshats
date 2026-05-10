@@ -136,6 +136,15 @@ export default function RootLayout() {
             }
             // No profile at all — new user mid-registration, allow through
           }
+          // Block suspended/deleted accounts
+          if (profile && profile.status !== "active") {
+            await signOutUser();
+            store.clearAuth();
+            store.setError("account_suspended");
+            store.setLoading(false);
+            store.setAuthInitialized(true);
+            return;
+          }
           store.setUser(firebaseUser);
           store.setUserProfile(profile);
         } catch (err) {

@@ -2,12 +2,20 @@ import BottomSheet from "@gorhom/bottom-sheet";
 import type { Rider } from "@goshats/types";
 import { Avatar } from "@goshats/ui";
 import { router } from "expo-router";
-import { Add, Gps, Notification, SearchNormal1 } from "iconsax-react-native";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  Add,
+  ArrowDown2,
+  Gps,
+  Location,
+  Notification,
+  SearchNormal1,
+} from "iconsax-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BottomSheetContent from "../../../components/home/BottomSheetContent";
+import RegionPickerModal from "../../../components/home/RegionPickerModal";
 import PlacesAutocomplete from "../../../components/map/PlacesAutocomplete";
 import RiderInfoCard from "../../../components/map/RiderInfoCard";
 import RiderMarker from "../../../components/map/RiderMarker";
@@ -15,9 +23,11 @@ import UserLocationMarker from "../../../components/map/UserLocationMarker";
 import { COLORS } from "../../../constants/theme";
 import { useLocation } from "../../../hooks/use-location";
 import { useNearbyRiders } from "../../../hooks/use-nearby-riders";
+import { useNotifications } from "../../../hooks/use-notifications";
 import type { PlaceDetails } from "../../../lib/maps";
 import { useAuthStore } from "../../../store/auth-store";
 import { useBookingStore } from "../../../store/booking-store";
+import { useLocationStore } from "../../../store/location-store";
 import { useMapStore } from "../../../store/map-store";
 import { useOrderStore } from "../../../store/order-store";
 
@@ -45,6 +55,7 @@ export default function HomeScreen() {
   // Location + riders
   const { location, heading } = useLocation();
   const { riders } = useNearbyRiders(10);
+  const { unreadCount } = useNotifications();
 
   // Map UI state
   const selectedRiderId = useMapStore((s) => s.selectedRiderId);
@@ -56,13 +67,20 @@ export default function HomeScreen() {
 
   // Search modal
   const [showSearch, setShowSearch] = useState(false);
+  const [showRegion, setShowRegion] = useState(false);
+
+  // Region browsing — overrides device location for the map + nearby riders
+  const viewLocation = useLocationStore((s) => s.viewLocation);
+  const viewLabel = useLocationStore((s) => s.viewLabel);
+  const setViewLocation = useLocationStore((s) => s.setViewLocation);
+  const clearViewLocation = useLocationStore((s) => s.clearViewLocation);
 
   // Recenter button — shows when user pans away
   const [showRecenter, setShowRecenter] = useState(false);
 
   // Animate to user location on first fix
   const hasAnimatedRef = useRef(false);
-  if (location && !hasAnimatedRef.current && mapRef.current) {
+  if (location && !hasAnimatedRef.current && !viewLocation && mapRef.current) {
     hasAnimatedRef.current = true;
     mapRef.current.animateToRegion(
       {
@@ -74,6 +92,20 @@ export default function HomeScreen() {
       800,
     );
   }
+
+  // Animate when viewLocation changes (browsing another region)
+  useEffect(() => {
+    if (!viewLocation || !mapRef.current) return;
+    mapRef.current.animateToRegion(
+      {
+        latitude: viewLocation.latitude,
+        longitude: viewLocation.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.025,
+      },
+      700,
+    );
+  }, [viewLocation]);
 
   const handleRiderPress = useCallback(
     (rider: Rider) => {
@@ -165,16 +197,25 @@ export default function HomeScreen() {
 
   const handleRegionChange = useCallback(
     (region: { latitude: number; longitude: number }) => {
+      // While browsing a remote region, the recenter button always shows
+      // so the user can return to their device location.
+      if (viewLocation) {
+        setShowRecenter(true);
+        return;
+      }
       if (!location) return;
       const drift =
         Math.abs(region.latitude - location.latitude) +
         Math.abs(region.longitude - location.longitude);
       setShowRecenter(drift > 0.003);
     },
-    [location],
+    [location, viewLocation],
   );
 
   const handleRecenter = useCallback(() => {
+    if (viewLocation) {
+      clearViewLocation();
+    }
     if (!location || !mapRef.current) return;
     mapRef.current.animateToRegion(
       {
@@ -186,7 +227,14 @@ export default function HomeScreen() {
       600,
     );
     setShowRecenter(false);
-  }, [location]);
+  }, [location, viewLocation, clearViewLocation]);
+
+  const handleRegionSelected = useCallback(
+    (place: PlaceDetails) => {
+      setViewLocation(place.latitude, place.longitude, place.address);
+    },
+    [setViewLocation],
+  );
 
   const selectedRider = riders.find((r) => r.uid === selectedRiderId) ?? null;
   const activeOrder = useOrderStore((s) => s.activeOrder);
@@ -236,7 +284,7 @@ export default function HomeScreen() {
       </MapView>
 
       {/* Recenter button */}
-      {showRecenter && location && (
+      {(showRecenter || viewLocation) && (
         <Pressable
           onPress={handleRecenter}
           className="absolute right-5 z-20 bg-white w-12 h-12 rounded-full items-center justify-center shadow-sm border border-gray-100 active:bg-gray-50"
@@ -275,15 +323,38 @@ export default function HomeScreen() {
             onPress={() => router.push("/notifications" as any)}
             className="bg-gray-50 p-3 rounded-full border border-gray-100 shadow-sm active:bg-gray-100"
           >
-            <View className="absolute top-3 right-3.5 w-2 h-2 rounded-full bg-red-500 z-10 border border-white" />
+            {unreadCount > 0 && (
+              <View
+                className="absolute -top-1 -right-1 z-10 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 border border-white items-center justify-center"
+              >
+                <Text className="text-[10px] font-sans-bold text-white leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
             <Notification size={20} color={COLORS.primary} variant="Bold" />
           </Pressable>
         </View>
 
+        {/* Region chip — switch the map + nearby riders to another area */}
+        <Pressable
+          onPress={() => setShowRegion(true)}
+          className="mt-5 self-start flex-row items-center bg-primary/10 rounded-full pl-2.5 pr-3 py-1.5 active:opacity-80"
+        >
+          <Location size={14} color={COLORS.primary} variant="Bold" />
+          <Text
+            className="font-sans-semibold text-[12px] text-primary mx-1.5 max-w-[180px]"
+            numberOfLines={1}
+          >
+            {viewLabel ?? "Near you"}
+          </Text>
+          <ArrowDown2 size={12} color={COLORS.primary} variant="Bold" />
+        </Pressable>
+
         {/* Search Bar */}
         <Pressable
           onPress={() => setShowSearch(true)}
-          className="mt-6 flex-row items-center bg-gray-50 rounded-full px-4 py-3 border border-gray-100 shadow-sm active:bg-gray-100"
+          className="mt-3 flex-row items-center bg-gray-50 rounded-full px-4 py-3 border border-gray-100 shadow-sm active:bg-gray-100"
         >
           <SearchNormal1 size={18} color="#9CA3AF" />
           <Text className="flex-1 ml-3 font-sans text-gray-400 text-[13px]">
@@ -294,7 +365,6 @@ export default function HomeScreen() {
           </View>
         </Pressable>
       </View>
-
 
       {/* Rider Info Card */}
       {selectedRider && (
@@ -359,6 +429,13 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Region Picker Modal */}
+      <RegionPickerModal
+        visible={showRegion}
+        onClose={() => setShowRegion(false)}
+        onSelect={handleRegionSelected}
+      />
     </View>
   );
 }

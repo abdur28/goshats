@@ -5,7 +5,6 @@ import {
 import RoutePolyline from "@/components/map/RoutePolyline";
 import UserLocationMarker from "@/components/map/UserLocationMarker";
 import { COLORS } from "@/constants/theme";
-import { useActiveOrder } from "@/hooks/use-active-order";
 import { useIncomingRequests } from "@/hooks/use-incoming-requests";
 import { useLocation } from "@/hooks/use-location";
 import { useLocationBroadcast } from "@/hooks/use-location-broadcast";
@@ -51,7 +50,6 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const { user, riderProfile, setRiderProfile } = useAuthStore();
   const { activeOrder, clearDelivery } = useDeliveryStore();
-  useActiveOrder();
   const { unreadCount } = useNotifications();
   const bottomSheetRef = useRef<BottomSheet>(null);
   const mapRef = useRef<MapView>(null);
@@ -62,6 +60,12 @@ export default function DashboardScreen() {
 
   const [showRecenter, setShowRecenter] = useState(false);
   const [isOnline, setIsOnline] = useState(!!riderProfile?.isOnline);
+
+  // Keep the local toggle in sync with Firestore changes (mirror CF flips,
+  // CF-driven isAvailable updates, admin actions, etc.) so the UI never lies.
+  useEffect(() => {
+    setIsOnline(!!riderProfile?.isOnline);
+  }, [riderProfile?.isOnline]);
   const [selectedRoute, setSelectedRoute] = useState<RoutePoints>(null);
   const [deliveryComplete, setDeliveryComplete] = useState(false);
   const hasAnimatedRef = useRef(false);
@@ -182,9 +186,13 @@ export default function DashboardScreen() {
   };
 
   useEffect(() => {
-    if (isOnline && !isBroadcasting) start();
-    else if (!isOnline && isBroadcasting) stop();
-  }, [isOnline, isBroadcasting, start, stop]);
+    // Broadcast location whenever rider is online OR has an active delivery
+    // (delivery covers the cold-launch-after-force-quit case where the local
+    // toggle is stale-false but the customer's tracking map needs live updates).
+    const shouldBroadcast = isOnline || !!activeOrder;
+    if (shouldBroadcast && !isBroadcasting) start();
+    else if (!shouldBroadcast && isBroadcasting) stop();
+  }, [isOnline, activeOrder, isBroadcasting, start, stop]);
 
   const handleRegionChange = useCallback(
     (region: { latitude: number; longitude: number }) => {

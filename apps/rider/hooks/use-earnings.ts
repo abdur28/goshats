@@ -14,7 +14,6 @@ interface EarningsData {
   tipsKobo: number;
   totalKobo: number;
   tripCount: number;
-  orders: Order[];
   payouts: RiderPayout[];
 }
 
@@ -46,7 +45,6 @@ export function useEarnings() {
     tipsKobo: 0,
     totalKobo: 0,
     tripCount: 0,
-    orders: [],
     payouts: [],
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -56,54 +54,51 @@ export function useEarnings() {
 
     setIsLoading(true);
     try {
-      const result = await getRiderOrders(user.uid, 50);
-      const orders: Order[] = result.orders;
-
+      // Fetch delivered orders for earnings summary
       const startDate = getStartDate(period);
+      let fareKobo = 0;
+      let tipsKobo = 0;
+      let tripCount = 0;
 
-      const filtered = orders.filter((order) => {
-        if (order.status !== "delivered") return false;
-        if (!startDate) return true;
+      try {
+        const result = await getRiderOrders(user.uid, 50);
+        const filtered = result.orders.filter((order: Order) => {
+          if (order.status !== "delivered") return false;
+          if (!startDate) return true;
+          const orderDate = order.createdAt?.toDate
+            ? order.createdAt.toDate()
+            : new Date(order.createdAt as any);
+          return orderDate >= startDate;
+        });
+        fareKobo = filtered.reduce((sum: number, o: Order) => sum + (o.fareAmountKobo ?? 0), 0);
+        tipsKobo = filtered.reduce((sum: number, o: Order) => sum + (o.tipAmountKobo ?? 0), 0);
+        tripCount = filtered.length;
+      } catch {
+        // Orders query failed — keep zeros
+      }
 
-        const orderDate = order.createdAt?.toDate
-          ? order.createdAt.toDate()
-          : new Date(order.createdAt as any);
-        return orderDate >= startDate;
-      });
-
-      const fareKobo = filtered.reduce(
-        (sum, order) => sum + (order.fareAmountKobo ?? 0),
-        0,
-      );
-      const tipsKobo = filtered.reduce(
-        (sum, order) => sum + (order.tipAmountKobo ?? 0),
-        0,
-      );
-
-      // Rider actual total earned is Fare + Tip
-      const payoutQuery = query(
-        collection(db, "rider_payouts"),
-        where("riderId", "==", user.uid),
-        orderBy("createdAt", "desc"),
-        limit(50)
-      );
-      
-      const payoutDocs = await getDocs(payoutQuery);
-      const payouts = payoutDocs.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as RiderPayout));
-
-      // Rider actual total earned in the selected period is Fare + Tip
-      const totalKobo = fareKobo + tipsKobo;
+      // Fetch payouts separately so one failure doesn't kill the other
+      let payouts: RiderPayout[] = [];
+      try {
+        const payoutQuery = query(
+          collection(db, "rider_payouts"),
+          where("riderId", "==", user.uid),
+          orderBy("createdAt", "desc"),
+          limit(50)
+        );
+        const payoutDocs = await getDocs(payoutQuery);
+        payouts = payoutDocs.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as RiderPayout));
+      } catch {
+        // Payout query failed (possibly missing index) — keep empty
+      }
 
       setEarnings({
         fareKobo,
         tipsKobo,
-        totalKobo,
-        tripCount: filtered.length,
-        orders: filtered,
+        totalKobo: fareKobo + tipsKobo,
+        tripCount,
         payouts,
       });
-    } catch {
-      // Keep existing state on error
     } finally {
       setIsLoading(false);
     }

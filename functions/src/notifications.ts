@@ -20,10 +20,25 @@ export const onOrderStatusChanged = onDocumentUpdated(
 
     if (!before || !after) return;
 
-    // Only trigger on status changes
+    const orderId = event.params.orderId;
+
+    // ── Card payment confirmation ────────────────────────────────────────────
+    // For card orders, the order is created with paymentStatus="pending" and
+    // status="pending"; we deferred the rider request notification at create
+    // time. Now that the charge succeeded (paymentStatus → "paid") and the
+    // order is still up for grabs (status="pending"), notify the rider.
+    if (
+      before.paymentStatus !== "paid" &&
+      after.paymentStatus === "paid" &&
+      after.status === "pending" &&
+      after.riderId
+    ) {
+      await sendNewRequestNotification(orderId, after, after.riderId as string);
+    }
+
+    // The rest of this handler only deals with status transitions
     if (before.status === after.status) return;
 
-    const orderId = event.params.orderId;
     const newStatus = after.status as string;
     const customerId = after.customerId as string;
     const riderId = after.riderId as string | undefined;
@@ -86,8 +101,131 @@ export const onOrderStatusChanged = onDocumentUpdated(
         });
       }
     }
+
+    // ── Rider availability lifecycle ────────────────────────────────────────
+    // Authoritative server-side toggle for `riders/{uid}.isAvailable`, so the
+    // customer's nearby-rider query (which filters on isAvailable) never returns
+    // a rider mid-delivery. Done here (not on the client) to avoid races and
+    // because the order-document is the single source of truth for assignment.
+    if (riderId) {
+      const becameActive =
+        before.status !== "accepted" &&
+        before.status !== "arrived_pickup" &&
+        before.status !== "picked_up" &&
+        before.status !== "in_transit" &&
+        (newStatus === "accepted" ||
+          newStatus === "arrived_pickup" ||
+          newStatus === "picked_up" ||
+          newStatus === "in_transit");
+
+      const becameTerminal =
+        newStatus === "delivered" || newStatus === "cancelled";
+
+      if (becameActive) {
+        try {
+          await firestore.collection("riders").doc(riderId).update({
+            isAvailable: false,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } catch (err) {
+          logger.warn("Failed to set rider isAvailable=false", {
+            riderId,
+            orderId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      } else if (becameTerminal) {
+        try {
+          await firestore.collection("riders").doc(riderId).update({
+            isAvailable: true,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        } catch (err) {
+          logger.warn("Failed to set rider isAvailable=true", {
+            riderId,
+            orderId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    }
   }
 );
+
+// ── New Order Created ───────────────────────────────────────────────────────
+
+/**
+ * Fires when a customer places a new order. Sends the assigned rider a push
+ * notification so they don't miss the request when their app is backgrounded.
+ *
+ * For card orders we defer until paymentStatus flips to "paid" (handled in
+ * onOrderStatusChanged) — otherwise riders would be pinged for orders that
+ * may immediately cancel due to a card decline.
+ */
+export const onOrderCreated = onDocumentCreated(
+  "orders/{orderId}",
+  async (event) => {
+    const order = event.data?.data();
+    if (!order) return;
+
+    const orderId = event.params.orderId;
+    const riderId = order.riderId as string | undefined;
+    if (!riderId) return;
+    if (order.status !== "pending") return;
+
+    // Card orders: wait for payment confirmation before pinging the rider
+    if (order.paymentMethod === "card" && order.paymentStatus !== "paid") {
+      return;
+    }
+
+    await sendNewRequestNotification(orderId, order, riderId);
+  }
+);
+
+/**
+ * Sends a "new delivery request" notification to a rider — called from both
+ * onOrderCreated (cash flow) and onOrderStatusChanged (card flow, after
+ * payment confirms). Idempotent: notification id is keyed on orderId so
+ * Firestore writes overwrite rather than duplicate.
+ */
+async function sendNewRequestNotification(
+  orderId: string,
+  order: FirebaseFirestore.DocumentData,
+  riderId: string
+): Promise<void> {
+  const fareKobo = (order.fareAmountKobo as number) || 0;
+  const fareNaira = Math.round(fareKobo / 100).toLocaleString("en-NG");
+  const distanceMeters = (order.estimatedDistanceMeters as number) || 0;
+  const distanceLabel =
+    distanceMeters >= 1000
+      ? `${(distanceMeters / 1000).toFixed(1)}km`
+      : `${Math.round(distanceMeters)}m`;
+  const pickupAddr =
+    (order.pickup?.address as string) ||
+    (order.pickup?.label as string) ||
+    "your area";
+
+  const title = "New delivery request 🚀";
+  const body = `₦${fareNaira} · ${distanceLabel} · Pickup at ${pickupAddr}`;
+  const notifId = `order_request_${orderId}`;
+
+  await storeNotification("riders", riderId, {
+    id: notifId,
+    title,
+    body,
+    type: "order_update",
+    data: { orderId, screen: "active-delivery" },
+  });
+
+  const tokens = await getPushTokens("riders", riderId);
+  if (tokens.length > 0) {
+    await sendToExpo(tokens, title, body, {
+      orderId,
+      screen: "active-delivery",
+      type: "order_request",
+    });
+  }
+}
 
 // ── Chat Message ────────────────────────────────────────────────────────────
 

@@ -1,4 +1,3 @@
-import { OrderCard } from "@/components/cards/OrderCard";
 import { EarningsHeroCard } from "@/components/earnings/EarningsHeroCard";
 import { COLORS } from "@/constants/theme";
 import { useEarnings } from "@/hooks/use-earnings";
@@ -7,7 +6,6 @@ import { DocumentText, MoneySend, WalletAdd } from "iconsax-react-native";
 import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuthStore } from "@/store/auth-store";
-import { useState } from "react";
 import { formatNaira } from "@/lib/format";
 
 const PERIODS = [
@@ -17,7 +15,7 @@ const PERIODS = [
   { label: "All Time", value: "all" },
 ] as const;
 
-function OrderCardSkeleton() {
+function PayoutSkeleton() {
   return (
     <View
       style={{
@@ -31,7 +29,7 @@ function OrderCardSkeleton() {
       }}
     >
       <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-        <Skeleton width={40} height={40} borderRadius={12} />
+        <Skeleton width={40} height={40} borderRadius={20} />
         <View style={{ flex: 1, gap: 8 }}>
           <Skeleton height={12} width="60%" borderRadius={6} />
           <Skeleton height={10} width="40%" borderRadius={6} />
@@ -45,10 +43,7 @@ function OrderCardSkeleton() {
 export default function EarningsScreen() {
   const { earnings, period, setPeriod, isLoading, refetch } = useEarnings();
   const riderProfile = useAuthStore((s) => s.riderProfile);
-  const [activeTab, setActiveTab] = useState<"deliveries" | "payouts">("deliveries");
   const withdrawableKobo = riderProfile?.withdrawableBalanceKobo ?? 0;
-
-  const data = activeTab === "deliveries" ? earnings.orders : earnings.payouts;
 
   return (
     <SafeAreaView className="flex-1 bg-[#F9FAFB]" edges={["top"]}>
@@ -89,13 +84,13 @@ export default function EarningsScreen() {
       </View>
 
       <FlatList
-        data={data as any[]}
+        data={earnings.payouts}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading && earnings.orders.length === 0}
+            refreshing={isLoading && earnings.payouts.length === 0}
             onRefresh={refetch}
             tintColor={COLORS.primary}
           />
@@ -115,7 +110,7 @@ export default function EarningsScreen() {
                   totalWithdrawnKobo={riderProfile?.completedPayoutsKobo ?? 0}
                   isLoading={false}
                 />
-                
+
                 {/* Manual Withdraw Button if there are stuck funds */}
                 {withdrawableKobo > 0 && (
                   <Pressable
@@ -127,74 +122,51 @@ export default function EarningsScreen() {
                     </Text>
                   </Pressable>
                 )}
+
+                {/* Earnings summary */}
+                <View className="px-6 flex-row items-center justify-between mb-4">
+                  <Text className="text-[16px] font-sans-bold text-gray-900">
+                    Payout History
+                  </Text>
+                  {earnings.tripCount > 0 && (
+                    <Text className="text-[13px] font-sans-medium text-gray-500">
+                      {earnings.tripCount} trip{earnings.tripCount !== 1 ? "s" : ""} &middot; {formatNaira(earnings.totalKobo)}
+                    </Text>
+                  )}
+                </View>
               </>
             )}
-
-            {/* Toggle Tabs */}
-            <View className="px-6 flex-row items-center gap-4 mb-4">
-              <Pressable onPress={() => setActiveTab("deliveries")} className={`pb-2 border-b-2 ${activeTab === "deliveries" ? "border-primary" : "border-transparent"}`}>
-                <Text className={`text-[16px] font-sans-bold ${activeTab === "deliveries" ? "text-gray-900" : "text-gray-400"}`}>
-                  Deliveries
-                </Text>
-              </Pressable>
-              <Pressable onPress={() => setActiveTab("payouts")} className={`pb-2 border-b-2 ${activeTab === "payouts" ? "border-primary" : "border-transparent"}`}>
-                <Text className={`text-[16px] font-sans-bold ${activeTab === "payouts" ? "text-gray-900" : "text-gray-400"}`}>
-                  Payouts
-                </Text>
-              </Pressable>
-            </View>
           </>
         }
-        renderItem={({ item }) => {
-          if (activeTab === "payouts") {
-            const payout = item as any; // RiderPayout
-            return (
-              <View className="mx-5 mb-3 p-4 bg-white rounded-[20px] border border-gray-100 flex-row items-center justify-between">
-                <View className="flex-row items-center gap-4">
-                  <View className={`w-10 h-10 rounded-full items-center justify-center ${
-                    payout.status === "completed" ? "bg-green-100" :
-                    payout.status === "processing" ? "bg-blue-100" : "bg-red-100"
-                  }`}>
-                    <MoneySend size={20} color={
-                      payout.status === "completed" ? "#10B981" :
-                      payout.status === "processing" ? "#3B82F6" : "#EF4444"
-                    } variant="Bulk" />
-                  </View>
-                  <View>
-                    <Text className="text-gray-900 font-sans-semibold text-[15px] mb-0.5">
-                      Payout
-                    </Text>
-                    <Text className="text-gray-500 font-sans-medium text-[12px] capitalize">
-                      {payout.status}
-                    </Text>
-                  </View>
-                </View>
-                <Text className="text-gray-900 font-sans-bold text-[15px]">
+        renderItem={({ item: payout }) => (
+          <View className="mx-5 mb-3 p-4 bg-white rounded-[20px] border border-gray-100 flex-row items-center justify-between">
+            <View className="flex-row items-center gap-4">
+              <View className={`w-10 h-10 rounded-full items-center justify-center ${
+                payout.status === "completed" ? "bg-green-100" :
+                payout.status === "processing" ? "bg-blue-100" : "bg-red-100"
+              }`}>
+                <MoneySend size={20} color={
+                  payout.status === "completed" ? "#10B981" :
+                  payout.status === "processing" ? "#3B82F6" : "#EF4444"
+                } variant="Bulk" />
+              </View>
+              <View>
+                <Text className="text-gray-900 font-sans-semibold text-[15px] mb-0.5">
                   {formatNaira(payout.amountKobo)}
                 </Text>
+                <Text className="text-gray-500 font-sans-medium text-[12px] capitalize">
+                  {payout.status}
+                </Text>
               </View>
-            );
-          }
-
-          return (
-          <OrderCard
-            item={{
-              id: item.id,
-              loadType: item.loadType ?? "other",
-              dropoff: { address: item.dropoff?.address ?? "Unknown address" },
-              date: "Completed",
-              totalAmountKobo:
-                (item.fareAmountKobo ?? 0) + (item.tipAmountKobo ?? 0),
-              status: item.status ?? "delivered",
-            }}
-          />
-        )}}
+            </View>
+          </View>
+        )}
         ListEmptyComponent={
           isLoading ? (
             <View style={{ marginTop: 8 }}>
-              <OrderCardSkeleton />
-              <OrderCardSkeleton />
-              <OrderCardSkeleton />
+              <PayoutSkeleton />
+              <PayoutSkeleton />
+              <PayoutSkeleton />
             </View>
           ) : (
             <View className="flex-1 items-center justify-center mt-64">
@@ -202,7 +174,7 @@ export default function EarningsScreen() {
                 <DocumentText size={32} color="#9CA3AF" variant="Bulk" />
               </View>
               <Text className="text-gray-500 font-sans-medium text-[15px] text-center mt-2">
-                No trips found.
+                No payouts yet.
               </Text>
             </View>
           )

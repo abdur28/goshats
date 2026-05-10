@@ -1,9 +1,12 @@
+import SavedAddressChips from "@/components/booking/SavedAddressChips";
 import BookingMapView from "@/components/map/BookingMapView";
 import PlacesAutocomplete from "@/components/map/PlacesAutocomplete";
 import { COLORS } from "@/constants/theme";
+import { useSavedAddresses } from "@/hooks/use-saved-addresses";
 import type { PlaceDetails } from "@/lib/maps";
 import { useBookingStore } from "@/store/booking-store";
 import { useLocationStore } from "@/store/location-store";
+import type { SavedAddress } from "@goshats/types";
 import { Header } from "@goshats/ui";
 import { router } from "expo-router";
 import { Add, CloseCircle, Gps } from "iconsax-react-native";
@@ -30,11 +33,33 @@ export default function LocationScreen() {
   } = useBookingStore();
   const currentLocation = useLocationStore((s) => s.currentLocation);
   const currentAddress = useLocationStore((s) => s.currentAddress);
+  const { addresses: savedAddresses } = useSavedAddresses();
 
   const [activeField, setActiveField] = useState<
     "pickup" | "dropoff" | "stop" | null
   >(dropoff ? null : "dropoff");
   const [editingStopIndex, setEditingStopIndex] = useState<number | null>(null);
+
+  const handleSavedAddressSelected = useCallback(
+    (addr: SavedAddress) => {
+      const stop = {
+        address: `${addr.street}, ${addr.city}`,
+        location: {
+          latitude: addr.location.latitude,
+          longitude: addr.location.longitude,
+        },
+        contactName: "",
+        contactPhone: "",
+        notes: "",
+      };
+      if (activeField === "pickup") setPickup(stop);
+      else if (activeField === "dropoff") setDropoff(stop);
+      else if (activeField === "stop") addStop(stop);
+      setActiveField(null);
+      setEditingStopIndex(null);
+    },
+    [activeField, setPickup, setDropoff, addStop],
+  );
 
   const handlePickupSelected = useCallback(
     (place: PlaceDetails) => {
@@ -112,6 +137,16 @@ export default function LocationScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* Saved address chips — only when actively picking a field */}
+          {activeField !== null && savedAddresses.length > 0 && (
+            <View className="mt-3">
+              <SavedAddressChips
+                addresses={savedAddresses}
+                onSelect={handleSavedAddressSelected}
+              />
+            </View>
+          )}
+
           {/* Location inputs card */}
           <View className="mx-5 mt-4 bg-white rounded-[24px] border border-gray-100 shadow-sm p-5">
             {/* Pickup */}

@@ -5,20 +5,22 @@ import { useLocationStore } from "@/store/location-store";
 
 export function useNearbyRiders(radiusKm: number = 10) {
   const currentLocation = useLocationStore((s) => s.currentLocation);
+  const viewLocation = useLocationStore((s) => s.viewLocation);
+  const origin = viewLocation ?? currentLocation;
   const [riders, setRiders] = useState<Rider[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchRiders = useCallback(async () => {
-    if (!currentLocation) return;
+    if (!origin) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
       const result = await getNearbyRiders(
-        currentLocation.latitude,
-        currentLocation.longitude,
+        origin.latitude,
+        origin.longitude,
         radiusKm
       );
       setRiders(result);
@@ -27,7 +29,7 @@ export function useNearbyRiders(radiusKm: number = 10) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentLocation, radiusKm]);
+  }, [origin, radiusKm]);
 
   useEffect(() => {
     fetchRiders();

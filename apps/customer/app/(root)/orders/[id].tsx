@@ -116,8 +116,8 @@ export default function OrderDetailsScreen() {
               riderLocation={
                 latestPosition
                   ? {
-                      latitude: latestPosition.latitude,
-                      longitude: latestPosition.longitude,
+                      latitude: latestPosition.location.latitude,
+                      longitude: latestPosition.location.longitude,
                     }
                   : undefined
               }

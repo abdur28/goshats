@@ -158,12 +158,18 @@ export default function WelcomeScreen() {
         otherName: credential.fullName.givenName ?? undefined,
       });
       const profile = await getUser(firebaseUser.uid);
+      if (profile && profile.status !== "active") {
+        await signOutUser();
+        throw new Error("account_suspended");
+      }
       useAuthStore.getState().setUser(firebaseUser);
       useAuthStore.getState().setUserProfile(profile);
       router.replace("/(root)/" as any);
     } catch (error: any) {
       if (error?.message === "wrong_role") {
         setStoreError("wrong_role");
+      } else if (error?.message === "account_suspended") {
+        setStoreError("account_suspended");
       } else {
         console.error("Apple sign-in error:", error);
         setSocialError(
@@ -192,12 +198,18 @@ export default function WelcomeScreen() {
       const firebaseUser = await signInWithGoogle(idToken);
       await ensureUserProfile(firebaseUser);
       const profile = await getUser(firebaseUser.uid);
+      if (profile && profile.status !== "active") {
+        await signOutUser();
+        throw new Error("account_suspended");
+      }
       useAuthStore.getState().setUser(firebaseUser);
       useAuthStore.getState().setUserProfile(profile);
       router.replace("/(root)/" as any);
     } catch (error: any) {
       if (error?.message === "wrong_role") {
         setStoreError("wrong_role");
+      } else if (error?.message === "account_suspended") {
+        setStoreError("account_suspended");
       } else {
         console.error("Google sign-in error:", error);
         setSocialError(
@@ -267,6 +279,16 @@ export default function WelcomeScreen() {
               <Text className="text-sm font-sans text-amber-700 flex-1">
                 This account is registered as a rider. Please use the GoShats
                 Rider app.
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Suspended account */}
+          {storeError === "account_suspended" ? (
+            <View className="bg-red-50 border border-red-100 rounded-2xl px-5 py-3.5 flex-row items-center gap-2">
+              <Ionicons name="ban-outline" size={16} color="#EF4444" />
+              <Text className="text-sm font-sans text-danger flex-1">
+                Your account has been suspended. Please contact support at support@goshats.com for assistance.
               </Text>
             </View>
           ) : null}

@@ -688,7 +688,7 @@ export const payoutOnDelivery = onDocumentUpdated(
 
       const payoutDoc = detailsSnap.docs[0];
       const payoutData = payoutDoc.data();
-      const encryptedAccount = payoutData.encryptedAccountNumber as string;
+      const encryptedAccount = payoutData.accountNumber as string;
       const bankCode = payoutData.bankCode as string;
       const accountName = payoutData.accountName as string;
       

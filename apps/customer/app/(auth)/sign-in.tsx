@@ -184,6 +184,15 @@ export default function SignInScreen() {
             </View>
           ) : null}
 
+          {storeError === "account_suspended" ? (
+            <View className="bg-red-50 border border-red-100 rounded-2xl px-5 py-3.5 mb-4 flex-row items-center gap-2">
+              <Ionicons name="ban-outline" size={16} color="#EF4444" />
+              <Text className="text-sm font-sans text-danger flex-1">
+                Your account has been suspended. Please contact support at support@goshats.com for assistance.
+              </Text>
+            </View>
+          ) : null}
+
           {firebaseError ? (
             <View className="bg-red-50 border border-red-100 rounded-full px-5 py-3.5 mb-4 flex-row items-center gap-2">
               <Ionicons name="alert-circle-outline" size={16} color="#EF4444" />

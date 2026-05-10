@@ -1,6 +1,7 @@
+import { getSessionId } from "@/lib/session-id";
 import { useAuthStore } from "@/store/auth-store";
 import { getUser, onAuthStateChange, signOutUser } from "@goshats/firebase";
-import { getRider } from "@goshats/firebase/src/firestore/riders";
+import { getRider, updateRider } from "@goshats/firebase/src/firestore/riders";
 import { useFonts } from "expo-font";
 import { Slot } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -130,6 +131,24 @@ export default function RootLayout() {
           }
           store.setUser(firebaseUser);
           store.setRiderProfile(profile);
+
+          // Claim this device as the active session. Older sessions on other
+          // devices will detect the mismatch via their listenToRider listener
+          // (set up in (root)/_layout.tsx) and sign themselves out.
+          if (profile && profile.status === "approved") {
+            try {
+              await updateRider(firebaseUser.uid, {
+                activeDeviceId: getSessionId(),
+              });
+            } catch {
+              // Non-fatal: if this fails (e.g. permissions), the rider can
+              // still use the app, they just lose single-device guarantee
+              // until next launch.
+            }
+          }
+
+          // Note: suspended/pending riders are handled by (auth)/_layout.tsx
+          // which redirects them to the pending-approval screen
         } catch (err) {
           if (__DEV__) console.error("Error fetching rider profile:", err);
           store.setUser(firebaseUser);

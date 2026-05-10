@@ -9,6 +9,8 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  onSnapshot,
+  type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "../config";
 import type { SavedAddress } from "@goshats/types";
@@ -62,4 +64,17 @@ export async function setDefaultAddress(
   }
 
   await batch.commit();
+}
+
+export function listenToAddresses(
+  uid: string,
+  callback: (addresses: SavedAddress[]) => void
+): Unsubscribe {
+  const q = query(addressesRef(uid), orderBy("createdAt", "desc"));
+  return onSnapshot(q, (snap) => {
+    const addresses = snap.docs.map(
+      (d) => ({ id: d.id, ...d.data() }) as SavedAddress
+    );
+    callback(addresses);
+  });
 }
